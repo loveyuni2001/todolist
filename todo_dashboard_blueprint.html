@@ -405,14 +405,29 @@ function cleanDateStr(rawDate) {
     return "";
 }
 
-/* 📥 資料載入核心 */
+// --- 核心邏輯 ---
 function loadDataFromGoogleSheets() {
-    if (!API_URL || API_URL.includes("您的全新_Google")) {
-        applyConfigUI();
-        updateMonthFilterOptions();
-        renderDashboard();
-        return; 
-    }
+    const loadingMask = document.getElementById('loading-mask');
+    if(loadingMask) loadingMask.style.display = 'flex';
+
+    fetch(API_URL)
+        .then(res => res.json())
+        .then(resData => {
+            if (resData && resData.tasks) {
+                tasks = resData.tasks.map(t => ({
+                    ...t,
+                    description: t.description || ""
+                }));
+                renderDashboard();
+                if(typeof renderCalendar === 'function') renderCalendar();
+            }
+            if(loadingMask) loadingMask.style.display = 'none';
+        })
+        .catch(err => {
+            console.error("載入失敗:", err);
+            if(loadingMask) loadingMask.style.display = 'none';
+        });
+}
 
     const loadingMask = document.getElementById('loading-mask');
     if(loadingMask) loadingMask.style.display = 'flex';
