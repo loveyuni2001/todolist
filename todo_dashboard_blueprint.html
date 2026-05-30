@@ -384,12 +384,18 @@
         reader.readAsDataURL(file);
     }
 
+    /* 🛡️ 鐵壁防護：完全切斷時區轉換，強行抓取前10個字元並統一轉成 YYYY/MM/DD */
     function cleanDateStr(rawDate) {
         if (!rawDate) return "";
         let str = rawDate.toString().trim();
+        
+        // 只要含有 T，就只切出 T 以前的純文字 (避免被 Z 扣時區)
         if (str.includes("T")) {
             str = str.split("T")[0];
         }
+        
+        // 抓出前 10 個字元 (例如 2026-05-30)
+        str = str.substring(0, 10);
         str = str.replace(/-/g, '/');
         
         const parts = str.split('/');
@@ -420,9 +426,10 @@
                     document.getElementById('setting-categories').value = config.categories.join(',');
                 }
                 if(resData.tasks) {
+                    // 🛡️ 在這裡讀入時就用純文字干涉，杜絕自動減一天的現象
                     tasks = resData.tasks.map(t => {
                         if (t.attachment === undefined) t.attachment = "";
-                        t.date = cleanDateStr(t.date);
+                        t.date = cleanDateStr(t.date); 
                         return t;
                     });
                 }
@@ -459,7 +466,7 @@
         .then(res => res.text())
         .then(text => {
             if(text === "Success") {
-                alert("🎉 所有待辦事項與自訂選單設定（包含附件連結欄位）已成功同步至雲端試算表！");
+                alert("🎉 所有待辦事項與自訂選單設定已成功同步至雲端試算表！");
             } else {
                 alert("回傳回應：" + text);
             }
@@ -537,7 +544,6 @@
         renderDashboard();
     }
 
-    /* 精準修復：把錯誤的 task 全部更正為 t，且不再過濾優先權「低」 */
     function renderUrgentTasks() {
         const container = document.getElementById('urgent-container');
         container.innerHTML = '';
@@ -559,7 +565,6 @@
             if (!t.date) return false;
             
             const taskStr = cleanDateStr(t.date);
-            // 只要大於等於今天，且小於等於 7 天後，不分優先權高低全部都顯示
             return taskStr >= todayStr && taskStr <= limitStr;
         });
 
