@@ -583,13 +583,13 @@
         calendarBody.innerHTML = html;
     }
 
-    // 📢 【關鍵核心】請將下方的網址換成您全新部署的 Google Apps Script Web App 網址
-    const API_URL = "您的全新_Google_Apps_Script網址";
+    // 📢 這裡已經幫您填入專屬的獨立 Web App 網址囉！
+    const API_URL = "https://script.google.com/macros/s/AKfycbwWgfzw6d_Kk5osOblW1_azjz4sDelYnTj6ilTu9y1sxi6kVF_2MVOby9h7ndJQ47K80Q/exec";
 
     // 真正的雲端回存同步函式
     function syncToGoogleSheets() {
         if(!API_URL || API_URL.includes("您的全新_Google")) {
-            alert("https://script.google.com/macros/s/AKfycbwWgfzw6d_Kk5osOblW1_azjz4sDelYnTj6ilTu9y1sxi6kVF_2MVOby9h7ndJQ47K80Q/exec");
+            alert("請先填入您的全新 Google Apps Script Web App 網址！");
             return;
         }
         
