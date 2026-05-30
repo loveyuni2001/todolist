@@ -384,28 +384,35 @@
         reader.readAsDataURL(file);
     }
 
-    /* 🛡️ 鐵壁防護：完全切斷時區轉換，強行抓取前10個字元並統一轉成 YYYY/MM/DD */
+    /* 🛡️ 終極防護：使用台灣在地時區格式化日期，完全斷絕 ISO 的格林威治扣時干擾 */
     function cleanDateStr(rawDate) {
         if (!rawDate) return "";
-        let str = rawDate.toString().trim();
-        
-        // 只要含有 T，就只切出 T 以前的純文字 (避免被 Z 扣時區)
-        if (str.includes("T")) {
-            str = str.split("T")[0];
+        try {
+            let dStr = rawDate.toString().trim();
+            // 處理包含時區的完整字串
+            let d = new Date(dStr);
+            if (!isNaN(d.getTime())) {
+                let formatter = new Intl.DateTimeFormat('zh-TW', {
+                    timeZone: 'Asia/Taipei',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                });
+                return formatter.format(d).replace(/-/g, '/'); // 產出 YYYY/MM/DD
+            }
+            
+            // 備用純文字文字清理
+            if (dStr.includes("T")) dStr = dStr.split("T")[0];
+            dStr = dStr.substring(0, 10).replace(/-/g, '/');
+            const parts = dStr.split('/');
+            if (parts.length === 3) {
+                return `${parts[0]}/${parts[1].padStart(2, '0')}/${parts[2].padStart(2, '0')}`;
+            }
+            return dStr;
+        } catch(e) {
+            console.error("日期解析出錯：", e);
+            return "";
         }
-        
-        // 抓出前 10 個字元 (例如 2026-05-30)
-        str = str.substring(0, 10);
-        str = str.replace(/-/g, '/');
-        
-        const parts = str.split('/');
-        if (parts.length === 3) {
-            const y = parts[0];
-            const m = parts[1].padStart(2, '0');
-            const d = parts[2].padStart(2, '0');
-            return `${y}/${m}/${d}`;
-        }
-        return str;
     }
 
     function loadDataFromGoogleSheets() {
@@ -422,15 +429,22 @@
             if(resData) {
                 if(resData.config) {
                     config = resData.config;
-                    document.getElementById('setting-owners').value = config.owners.join(',');
-                    document.getElementById('setting-categories').value = config.categories.join(',');
+                    document.getElementById('setting-owners').value = (config.owners || []).join(',');
+                    document.getElementById('setting-categories').value = (config.categories || []).join(',');
                 }
                 if(resData.tasks) {
-                    // 🛡️ 在這裡讀入時就用純文字干涉，杜絕自動減一天的現象
+                    // 🛡️ 欄位防空保護，確保任何一個欄位是空值都不會引發程式斷炊崩潰
                     tasks = resData.tasks.map(t => {
-                        if (t.attachment === undefined) t.attachment = "";
-                        t.date = cleanDateStr(t.date); 
-                        return t;
+                        return {
+                            id: t.id || Date.now() + Math.random(),
+                            date: cleanDateStr(t.date),
+                            category: t.category || "🏠 家用日常",
+                            name: t.name || "(未命名事件)",
+                            owner: t.owner || "全家",
+                            priority: t.priority || "🟡 中",
+                            status: t.status || "未開始",
+                            attachment: t.attachment || ""
+                        };
                     });
                 }
             }
@@ -544,84 +558,86 @@
         renderDashboard();
     }
 
+    /* 🛡️ 高容錯渲染：全面抓取未來 7 天，遇到極端狀況也不會中斷其餘任務繪製 */
     function renderUrgentTasks() {
         const container = document.getElementById('urgent-container');
         container.innerHTML = '';
         
-        const now = new Date();
-        const tYear = now.getFullYear();
-        const tMonth = String(now.getMonth() + 1).padStart(2, '0');
-        const tDay = String(now.getDate()).padStart(2, '0');
-        const todayStr = `${tYear}/${tMonth}/${tDay}`;
+        try {
+            const now = new Date();
+            let formatter = new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' });
+            const todayStr = formatter.format(now).replace(/-/g, '/');
 
-        const limitDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-        const lYear = limitDate.getFullYear();
-        const lMonth = String(limitDate.getMonth() + 1).padStart(2, '0');
-        const lDay = String(limitDate.getDate()).padStart(2, '0');
-        const limitStr = `${lYear}/${lMonth}/${lDay}`;
+            const limitDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            const limitStr = formatter.format(limitDate).replace(/-/g, '/');
 
-        const urgentList = tasks.filter(t => {
-            if (t.status === '已完成') return false;
-            if (!t.date) return false;
-            
-            const taskStr = cleanDateStr(t.date);
-            return taskStr >= todayStr && taskStr <= limitStr;
-        });
+            const urgentList = tasks.filter(t => {
+                if (!t || t.status === '已完成' || !t.date) return false;
+                const taskStr = cleanDateStr(t.date);
+                return taskStr >= todayStr && taskStr <= limitStr;
+            });
 
-        if (urgentList.length === 0) {
-            container.innerHTML = '<div class="no-data">☀️ 太棒了！近期一週內無即將截止的未完成項目。</div>';
-            return;
+            if (urgentList.length === 0) {
+                container.innerHTML = '<div class="no-data">☀️ 太棒了！近期一週內無即將截止的未完成項目。</div>';
+                return;
+            }
+
+            urgentList.sort((a,b) => cleanDateStr(a.date).localeCompare(cleanDateStr(b.date)));
+            urgentList.forEach(t => {
+                container.innerHTML += `
+                    <div class="urgent-item">
+                        <div class="urgent-meta">⏰ 截止日: ${cleanDateStr(t.date)} | 負責人: ${t.owner} [${t.priority}]</div>
+                        <strong>[${t.category}]</strong> ${t.name}
+                    </div>
+                `;
+            });
+        } catch(e) {
+            console.error("急件解析畫面渲染失敗：", e);
+            container.innerHTML = '<div class="no-data">⚠️ 急件解析區載入異常。</div>';
         }
-
-        urgentList.sort((a,b) => cleanDateStr(a.date).localeCompare(cleanDateStr(b.date)));
-        urgentList.forEach(t => {
-            container.innerHTML += `
-                <div class="urgent-item">
-                    <div class="urgent-meta">⏰ 截止日: ${cleanDateStr(t.date)} | 負責人: ${t.owner} [${t.priority}]</div>
-                    <strong>[${t.category}]</strong> ${t.name}
-                </div>
-            `;
-        });
     }
 
     function renderCalendar() {
         const tbody = document.getElementById('calendar-body');
         tbody.innerHTML = '';
-        
-        const today = new Date();
-        const startDayOfWeek = today.getDay(); 
-        const calendarStart = new Date(today.getTime() - startDayOfWeek * 24 * 60 * 60 * 1000);
+        try {
+            const today = new Date();
+            const startDayOfWeek = today.getDay(); 
+            const calendarStart = new Date(today.getTime() - startDayOfWeek * 24 * 60 * 60 * 1000);
 
-        let currentPointer = new Date(calendarStart.getTime());
-        
-        for (let row = 0; row < 2; row++) {
-            let tr = document.createElement('tr');
-            for (let col = 0; col < 7; col++) {
-                let td = document.createElement('td');
-                let dateStr = `${currentPointer.getFullYear()}/${String(currentPointer.getMonth()+1).padStart(2,'0')}/${String(currentPointer.getDate()).padStart(2,'0')}`;
-                
-                if (currentPointer.toDateString() === today.toDateString()) {
-                    td.className = 'today';
+            let currentPointer = new Date(calendarStart.getTime());
+            
+            for (let row = 0; row < 2; row++) {
+                let tr = document.createElement('tr');
+                for (let col = 0; col < 7; col++) {
+                    let td = document.createElement('td');
+                    let dateStr = `${currentPointer.getFullYear()}/${String(currentPointer.getMonth()+1).padStart(2,'0')}/${String(currentPointer.getDate()).padStart(2,'0')}`;
+                    
+                    if (currentPointer.toDateString() === today.toDateString()) {
+                        td.className = 'today';
+                    }
+
+                    let dayNumSpan = document.createElement('span');
+                    dayNumSpan.className = 'calendar-day-num';
+                    dayNumSpan.innerText = currentPointer.getDate();
+                    td.appendChild(dayNumSpan);
+
+                    const dayTasks = tasks.filter(t => t && cleanDateStr(t.date) === dateStr);
+                    dayTasks.forEach(t => {
+                        let tag = document.createElement('span');
+                        tag.className = 'calendar-tag' + (t.status === '已完成' ? ' done' : '');
+                        tag.title = `[${t.owner}] ${t.name}`;
+                        tag.innerText = `[${t.owner}] ${t.name}`;
+                        td.appendChild(tag);
+                    });
+
+                    tr.appendChild(td);
+                    currentPointer.setDate(currentPointer.getDate() + 1);
                 }
-
-                let dayNumSpan = document.createElement('span');
-                dayNumSpan.className = 'calendar-day-num';
-                dayNumSpan.innerText = currentPointer.getDate();
-                td.appendChild(dayNumSpan);
-
-                const dayTasks = tasks.filter(t => cleanDateStr(t.date) === dateStr);
-                dayTasks.forEach(t => {
-                    let tag = document.createElement('span');
-                    tag.className = 'calendar-tag' + (t.status === '已完成' ? ' done' : '');
-                    tag.title = `[${t.owner}] ${t.name}`;
-                    tag.innerText = `[${t.owner}] ${t.name}`;
-                    td.appendChild(tag);
-                });
-
-                tr.appendChild(td);
-                currentPointer.setDate(currentPointer.getDate() + 1);
+                tbody.appendChild(tr);
             }
-            tbody.appendChild(tr);
+        } catch(e) {
+            console.error("日曆渲染出錯", e);
         }
     }
 
@@ -705,6 +721,7 @@
         const filterStatus = document.getElementById('filter-status').value;
 
         const filteredTasks = tasks.filter(t => {
+            if(!t) return false;
             const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
             const tYm = cleanDateStr(t.date).substring(0, 7).replace(/\//g, '-');
             const fYm = filterMonth.replace(/\//g, '-');
