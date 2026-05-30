@@ -799,6 +799,26 @@ function renderDashboard() {
         renderDashboard();
     });
 }
+    // 1. 強制覆蓋舊的載入邏輯
+window.loadDataFromGoogleSheets = function() {
+    if(document.getElementById('loading-mask')) document.getElementById('loading-mask').style.display = 'flex';
+    fetch(API_URL)
+    .then(res => res.json())
+    .then(data => {
+        tasks = data.tasks.map(t => {
+            return {
+                ...t,
+                description: t.description || "" // 筆記回來了！
+            };
+        });
+        renderDashboard(); 
+        if(document.getElementById('loading-mask')) document.getElementById('loading-mask').style.display = 'none';
+    });
+};
+
+// 2. 這是修正月曆日期的邏輯 (解決綠框框提早一天)
+// 請將原本的 renderCalendar 函式內容中的日期轉換改成這樣：
+// 把原本的 new Date(t.date) 全部換成 new Date(t.date.replace(/-/g, '/'))
 </script>
 </body>
 </html>
