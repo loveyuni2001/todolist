@@ -41,29 +41,29 @@
         }
         .panel-title { font-size: 16px; font-weight: bold; margin-top: 5px; margin-bottom: 15px; border-bottom: 1px dashed #d1d5db; padding-bottom: 8px; }
         
-        /* 🛠️ 重新設計的 01區 欄位網格系統：完美解決手機對齊問題 */
-        .form-grid-container {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
+        /* 01區 電腦版經典 3 欄位排版 */
+        .form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
+        .form-group { display: flex; flex-direction: column; }
         label { font-size: 13px; font-weight: bold; color: #374151; display: block; margin-bottom: 5px; }
+        
+        /* 調整回原本精緻的欄位高度 */
         input[type="text"], input[type="date"], select {
-            width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background-color: #f8fafc; height: 42px;
+            width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background-color: #f8fafc; height: 38px;
         }
         input:focus, select:focus { border-color: #111827; outline: none; background-color: #ffffff; }
+        
+        /* 🛠️ 特別修正：解決手機版 date 欄位右側凸出、無法對齊的問題 */
+        input[type="date"] {
+            max-width: 100% !important;
+            appearance: none;
+            -webkit-appearance: none;
+        }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 25px; border-radius: 12px; border: 2px solid #111827; width: 90%; max-width: 500px; }
         .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
 
-        .btn-submit { background-color: #111827; color: #ffffff; border: none; width: 100%; padding: 12px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 5px; height: 45px; }
+        .btn-submit { background-color: #111827; color: #ffffff; border: none; width: 100%; padding: 12px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 5px; height: 42px; }
         .btn-submit:hover { background-color: #1f2937; }
         .urgent-item { background-color: #fff1f2; border-left: 4px solid #f43f5e; padding: 10px; border-radius: 4px; margin-bottom: 10px; font-size: 13px; }
         .urgent-meta { font-size: 11px; color: #e11d48; font-weight: bold; margin-bottom: 2px; }
@@ -74,11 +74,9 @@
         .calendar-table th { background-color: #f8fafc; color: #475569; font-size: 13px; font-weight: bold; padding: 8px 6px; border: 1px solid #e2e8f0; }
         .calendar-table td { border: 1px solid #e2e8f0; width: 14.28%; height: 75px; vertical-align: top; padding: 6px; font-size: 13px; background-color: #ffffff; }
         
-        /* 今天 (今) 回歸原本的清爽綠色邊框高亮 */
+        /* 今天 (今) 清爽綠色邊框高亮 */
         .calendar-table td.today { background-color: #f0fdf4; border: 2px solid #16a34a; }
         .calendar-table td.today .calendar-day-num { color: #16a34a; }
-        
-        /* 日曆日期數字回歸原本樣式 */
         .calendar-day-num { font-size: 13px; font-weight: bold; color: #64748b; margin-bottom: 4px; display: block; }
         
         /* ⚡ 全支付橘黃色底 + 黑色粗字 */
@@ -121,7 +119,7 @@
         
         .loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; justify-content:center; align-items:center; font-size:18px; font-weight:bold; color:#111827; }
 
-        /* 📱 手機版專屬極致優化 */
+        /* 📱 手機版專屬優化 */
         @media (max-width: 768px) {
             body { padding: 10px; }
             .main-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -129,14 +127,22 @@
             .header-buttons { width: 100%; justify-content: center; }
             .btn-sync, .btn-settings { flex: 1; text-align: center; font-size: 13px; padding: 8px 12px; }
             
-            /* 🚀 強制單一網格，所有欄位寬度100%從上到下整齊排好 */
-            .form-grid-container { 
-                grid-template-columns: 1fr !important; 
+            /* 恢復原本最讚的「兩兩並排」網格 */
+            .form-row { 
+                grid-template-columns: 1fr 1fr !important; 
                 gap: 12px; 
-                margin-bottom: 12px; 
             }
-            .form-group { width: 100% !important; }
+            /* 事件名稱單獨佔滿一行，維持原有結構 */
+            .form-row:nth-child(1) .form-group:nth-child(2) { 
+                grid-column: span 2; 
+            }
             
+            /* 針對手機版一邊一底對齊的極致微調 */
+            input[type="text"], input[type="date"], select {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+
             .filter-bar { flex-direction: column; align-items: flex-start; }
             .filter-controls { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
             .inline-select { width: 100%; }
@@ -173,7 +179,7 @@
             <span class="panel-badge">01 手動記錄 / 新增區</span>
             <h2 class="panel-title">✏️ 新增待辦事件與專案項目</h2>
             
-            <div class="form-grid-container">
+            <div class="form-row">
                 <div class="form-group">
                     <label>大項目分類</label>
                     <select id="task-category"></select>
@@ -186,6 +192,9 @@
                     <label>負責對象</label>
                     <select id="task-owner"></select>
                 </div>
+            </div>
+
+            <div class="form-row">
                 <div class="form-group">
                     <label>截止日期</label>
                     <input type="date" id="task-date">
@@ -460,6 +469,7 @@
         input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
     }
 
+    // 項目清單點擊修改日期 (補上修正格式)
     function startEditDate(id, currentDate, cellElement) {
         if (cellElement.querySelector('input, select')) return;
         const input = document.createElement('input');
