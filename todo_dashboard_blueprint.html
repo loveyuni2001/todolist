@@ -711,7 +711,8 @@
         if(confirm('確定要刪除此項待辦嗎？')) { tasks = tasks.filter(task => task.id !== id); updateMonthFilterOptions(); renderDashboard(); }
     }
 
-    function renderDashboard() {
+    // 這是修正版的 renderDashboard 函式，請直接覆蓋你原本的
+function renderDashboard() {
     renderUrgentTasks();
     renderCalendar();
 
@@ -745,20 +746,16 @@
             const tr = document.createElement('tr');
             if(isDone) tr.className = 'row-done';
             
-            // 這裡就是「點擊觸發」的開關
-            tr.onclick = (e) => {
-                if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' && e.target.tagName !== 'TEXTAREA') {
-                    toggleDetail(t.id, tr);
-                }
-            };
-
+            // 關鍵修改：移除了原本整行的 onclick，只留給特定欄位
             tr.innerHTML = `
                 <td style="text-align:center;"><input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${isDone ? 'checked' : ''}></td>
-                <td class="nowrap-cell" onclick="${isDone ? '' : `startEditDate(${t.id}, '${cleanDate}', this)`}"><span class="${isDone ? '' : 'editable-cell'}"><strong>${cleanDate}</strong></span></td>
-                <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${t.category}</span></td>
-                <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}"><span class="${isDone ? 'task-text' : 'task-text editable-cell'}">${t.name}</span></td>
-                <td onclick="${isDone ? '' : `startEditAttachment(${t.id}, '${(t.attachment || "").replace(/'/g, "\\'")}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${t.attachment ? `<a href="${t.attachment}" target="_blank" class="btn-attachment" onclick="event.stopPropagation()">🔗 查看附件</a>` : '<span class="empty-link">(點此補貼網址)</span>'}</span></td>
-                <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${t.owner}</span></td>
+                <td class="nowrap-cell" onclick="${isDone ? '' : `startEditDate(${t.id}, '${cleanDate}', this)`}"><span><strong>${cleanDate}</strong></span></td>
+                <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span>${t.category}</span></td>
+                <td onclick="toggleDetail(${t.id}, this.parentElement)">
+                    <span class="${isDone ? 'task-text' : 'task-text editable-cell'}">📝 ${t.name}</span>
+                </td>
+                <td onclick="${isDone ? '' : `startEditAttachment(${t.id}, '${(t.attachment || "").replace(/'/g, "\\'")}', this)`}"><span>${t.attachment ? `<a href="${t.attachment}" target="_blank" class="btn-attachment" onclick="event.stopPropagation()">🔗 查看附件</a>` : '<span class="empty-link">(點此補貼網址)</span>'}</span></td>
+                <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}"><span>${t.owner}</span></td>
                 <td class="nowrap-cell" style="font-weight:bold;">${t.priority}</td>
                 <td class="nowrap-cell"><span class="status-badge status-${t.status}">${t.status}</span></td>
                 <td style="text-align:center;"><button class="btn-delete" onclick="deleteTask(${t.id})">🗑️</button></td>
@@ -767,31 +764,26 @@
         });
     }
 }
-    function toggleDetail(id, rowElement) {
-        const existing = document.querySelector(`.detail-row-${id}`);
-        if (existing) { existing.remove(); return; }
-        document.querySelectorAll('.detail-row').forEach(el => el.remove());
+   function toggleDetail(id, rowElement) {
+    event.stopPropagation();
+    const existing = document.querySelector(`.detail-row-${id}`);
+    if (existing) { existing.remove(); return; }
+    document.querySelectorAll('.detail-row').forEach(el => el.remove());
 
-        const task = tasks.find(t => t.id == id);
-        if (!task) return;
+    const task = tasks.find(t => t.id == id);
+    if (!task) return;
 
-        const newRow = document.createElement('tr');
-        newRow.className = `detail-row detail-row-${id}`;
-        // 核心修改：在最外層的 div 加上 onclick="event.stopPropagation()"
-        newRow.innerHTML = `<td colspan="9" onclick="event.stopPropagation()" style="background:#fffbeb; padding:20px; border: 2px solid #fcd34d;">
+    const newRow = document.createElement('tr');
+    newRow.className = `detail-row detail-row-${id}`;
+    newRow.innerHTML = `
+        <td colspan="9" onclick="event.stopPropagation()" style="background:#fffbeb; padding:20px; border: 2px solid #fcd34d;">
             <strong>📝 編輯 "${task.name || '項目'}" 的詳細筆記：</strong>
             <textarea id="desc-${id}" style="width:100%; height:120px; display:block; margin:10px 0; padding:10px;">${task.description || ''}</textarea>
             <button onclick="saveDescription('${id}')" style="background:#d97706; color:white; border:none; padding:8px 16px; cursor:pointer;">💾 儲存筆記</button>
-        </td>`;
-        rowElement.parentNode.insertBefore(newRow, rowElement.nextSibling);
-    }
-
-    function saveDescription(id) {
-        const desc = document.getElementById(`desc-${id}`).value;
-        tasks = tasks.map(t => { if(t.id == id) t.description = desc; return t; });
-        alert("筆記已更新！");
-        renderDashboard();
-    }
+        </td>
+    `;
+    rowElement.parentNode.insertBefore(newRow, rowElement.nextSibling);
+}
 </script>
 </body>
 </html>
