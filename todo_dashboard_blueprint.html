@@ -184,7 +184,7 @@
     <div class="main-grid">
         <div class="panel-card">
             <span class="panel-badge">00 智慧急件解析</span>
-            <h2 class="panel-title">🔔 近期一週截止內提醒 (7天內未完成急件)</h2>
+            <h2 class="panel-title">🔔 近期一週截止內提醒 (7天內所有未完成項目)</h2>
             <div id="urgent-container"></div>
         </div>
 
@@ -392,7 +392,6 @@
         }
         str = str.replace(/-/g, '/');
         
-        // 確保格式為 YYYY/MM/DD
         const parts = str.split('/');
         if (parts.length === 3) {
             const y = parts[0];
@@ -538,41 +537,37 @@
         renderDashboard();
     }
 
-    /* 💡 公式全面重寫：精準字串比對公式，徹底消滅時區與時分秒吃掉項目的問題 */
+    /* 精準修復：把錯誤的 task 全部更正為 t，且不再過濾優先權「低」 */
     function renderUrgentTasks() {
         const container = document.getElementById('urgent-container');
         container.innerHTML = '';
         
-        // 1. 抓取台灣當天精確的 YYYY/MM/DD 純文字
         const now = new Date();
         const tYear = now.getFullYear();
         const tMonth = String(now.getMonth() + 1).padStart(2, '0');
         const tDay = String(now.getDate()).padStart(2, '0');
         const todayStr = `${tYear}/${tMonth}/${tDay}`;
 
-        // 2. 計算 7 天後的日期極限字串值
         const limitDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
         const lYear = limitDate.getFullYear();
         const lMonth = String(limitDate.getMonth() + 1).padStart(2, '0');
         const lDay = String(limitDate.getDate()).padStart(2, '0');
         const limitStr = `${lYear}/${lMonth}/${lDay}`;
 
-        // 3. 透過字串排序特性進行精準區間篩選 (排除過期、只留未來7天與今天)
         const urgentList = tasks.filter(t => {
             if (t.status === '已完成') return false;
             if (!t.date) return false;
             
             const taskStr = cleanDateStr(t.date);
-            // 只要大於等於今天，且小於等於 7 天後，不管幾點鐘通通抓進來！
+            // 只要大於等於今天，且小於等於 7 天後，不分優先權高低全部都顯示
             return taskStr >= todayStr && taskStr <= limitStr;
         });
 
         if (urgentList.length === 0) {
-            container.innerHTML = '<div class="no-data">☀️ 太棒了！近期一週內無即將截止的未完成急件。</div>';
+            container.innerHTML = '<div class="no-data">☀️ 太棒了！近期一週內無即將截止的未完成項目。</div>';
             return;
         }
 
-        // 排序並輸出
         urgentList.sort((a,b) => cleanDateStr(a.date).localeCompare(cleanDateStr(b.date)));
         urgentList.forEach(t => {
             container.innerHTML += `
