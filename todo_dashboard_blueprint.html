@@ -41,9 +41,8 @@
         }
         .panel-title { font-size: 16px; font-weight: bold; margin-top: 5px; margin-bottom: 15px; border-bottom: 1px dashed #d1d5db; padding-bottom: 8px; }
         
-        /* 01區 網格結構維持經典 3 欄位 */
         .form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
-        .form-group { display: flex; flex-direction: column; }
+        .form-group { display: flex; flex-direction: column; position: relative; }
         label { font-size: 13px; font-weight: bold; color: #374151; display: block; margin-bottom: 5px; }
         
         input[type="text"], input[type="date"], select {
@@ -56,6 +55,15 @@
             appearance: none;
             -webkit-appearance: none;
         }
+        
+        /* 📷 整合型上傳按鈕排版 */
+        .upload-wrapper { display: flex; gap: 8px; width: 100%; }
+        .btn-upload-trigger {
+            background-color: #1e293b; color: white; border: none; padding: 0 15px;
+            border-radius: 6px; font-size: 13px; font-weight: bold; cursor: pointer;
+            white-space: nowrap; height: 38px; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn-upload-trigger:hover { background-color: #334155; }
         
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 25px; border-radius: 12px; border: 2px solid #111827; width: 90%; max-width: 500px; }
@@ -90,7 +98,6 @@
         .filter-controls { display: flex; gap: 8px; flex-wrap: wrap; }
         .inline-select { width: auto; display: inline-block; padding: 6px 12px; font-size: 13px; border-radius: 6px; border: 1px solid #cbd5e1; }
         
-        /* 項目列表外殼 */
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
         .todo-table { width: 100%; border-collapse: collapse; min-width: 800px; }
         .todo-table th { background-color: #1e293b; color: #ffffff; padding: 10px; text-align: left; font-size: 14px; white-space: nowrap; }
@@ -110,7 +117,6 @@
         .status-進行中 { background-color: #dbeafe; color: #2563eb; }
         .status-已完成 { background-color: #dcfce7; color: #16a34a; }
         
-        /* 📎 附件精緻按鈕與元件樣式 */
         .btn-attachment {
             display: inline-flex; align-items: center; background-color: #eff6ff; color: #2563eb;
             border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 12px;
@@ -124,7 +130,7 @@
         
         .loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; justify-content:center; align-items:center; font-size:18px; font-weight:bold; color:#111827; }
 
-        /* 📱 手機版專屬完美兩兩排版優化 */
+        /* 📱 手機版完美並排與優化 */
         @media (max-width: 768px) {
             body { padding: 10px; }
             .main-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -132,16 +138,14 @@
             .header-buttons { width: 100%; justify-content: center; }
             .btn-sync, .btn-settings { flex: 1; text-align: center; font-size: 13px; padding: 8px 12px; }
             
-            /* 完美兩兩並排 */
             .form-row { 
                 grid-template-columns: 1fr 1fr !important; 
                 gap: 12px; 
             }
-            /* 事件名稱單獨佔滿一行 */
             .form-row:nth-child(1) .form-group:nth-child(2) { 
                 grid-column: span 2; 
             }
-            /* 讓新增的第三排附件網址也能在手機上優雅延展 */
+            /* 讓附件欄位一列拉滿，拍照按鈕不被擠壓 */
             .form-row:nth-child(3) .form-group:nth-child(1) {
                 grid-column: span 2;
             }
@@ -228,7 +232,11 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>📄 附件網址 / 雲端硬碟詳細連結 (選填)</label>
-                    <input type="text" id="task-attachment" placeholder="可貼上 Google Drive 照片、說明網址或空白...">
+                    <div class="upload-wrapper">
+                        <input type="text" id="task-attachment" placeholder="可手動貼上連結，或點右邊直接上傳檔案...">
+                        <button type="button" class="btn-upload-trigger" onclick="document.getElementById('file-hid-input').click()">📷 上傳檔案</button>
+                        <input type="file" id="file-hid-input" style="display:none;" onchange="handleFileDirectUpload(this)">
+                    </div>
                 </div>
             </div>
 
@@ -326,6 +334,58 @@
         loadDataFromGoogleSheets();
     };
 
+    // ⚡ 核心新功能：處理網頁端直接拍照或選檔案背景上傳
+    function handleFileDirectUpload(fileInput) {
+        const file = fileInput.files[0];
+        if (!file) return;
+
+        // 限制大於 20MB 的極大檔案，避免傳輸逾時
+        if (file.size > 20 * 1024 * 1024) {
+            alert("檔案太大了（請小於 20MB），建議先進行圖片壓縮喔！");
+            fileInput.value = "";
+            return;
+        }
+
+        document.getElementById('loading-mask').innerText = "⏳ 檔案正在直接上傳至 Google Drive 附件庫...";
+        document.getElementById('loading-mask').style.display = 'flex';
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Str = e.target.result.split(',')[1];
+            const payload = {
+                action: "uploadFile",
+                fileName: file.name,
+                mimeType: file.type,
+                base64Data: base64Str
+            };
+
+            fetch(API_URL, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(resData => {
+                if (resData.status === "Success" && resData.url) {
+                    // 自動把得到的 Google Drive 瀏覽網址填進去！
+                    document.getElementById('task-attachment').value = resData.url;
+                    alert("🎉 檔案上傳成功！已自動帶入雲端硬碟連結。");
+                } else {
+                    alert("上傳失敗：" + (resData.message || "未知錯誤"));
+                }
+            })
+            .catch(err => {
+                console.error("上傳發生異常：", err);
+                alert("上傳至雲端時連線逾時，請確認 Apps Script 部署與資料夾 ID 是否正確。");
+            })
+            .finally(() => {
+                fileInput.value = ""; // 清空，讓同一個檔案可以重複選
+                document.getElementById('loading-mask').innerText = "⏳ 雲端資料同步中，請稍候...";
+                document.getElementById('loading-mask').style.display = 'none';
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
     function loadDataFromGoogleSheets() {
         if(!API_URL || API_URL.includes("您的全新_Google")) {
             applyConfigUI();
@@ -333,9 +393,7 @@
             renderDashboard();
             return;
         }
-        
         document.getElementById('loading-mask').style.display = 'flex';
-        
         fetch(API_URL)
         .then(res => res.json())
         .then(resData => {
@@ -346,7 +404,6 @@
                     document.getElementById('setting-categories').value = config.categories.join(',');
                 }
                 if(resData.tasks) {
-                    // 確保舊資料也有 attachment 屬性，避免錯誤
                     tasks = resData.tasks.map(t => {
                         if (t.attachment === undefined) t.attachment = "";
                         return t;
@@ -374,18 +431,9 @@
             alert("請先填入您的全新 Google Apps Script Web App 網址！");
             return;
         }
-        
         document.getElementById('loading-mask').style.display = 'flex';
-        
-        const payload = {
-            tasks: tasks,
-            config: config
-        };
-        
-        fetch(API_URL, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        })
+        const payload = { tasks: tasks, config: config };
+        fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
         .then(res => res.text())
         .then(text => {
             if(text === "Success") {
@@ -439,17 +487,9 @@
         const savedValue = monthSelect.value;
         monthSelect.innerHTML = '<option value="全部">📅 全部月份</option>';
         const months = [];
-        tasks.forEach(t => {
-            if(t.date) {
-                const ym = t.date.substring(0, 7);
-                if(!months.includes(ym)) months.push(ym);
-            }
-        });
+        tasks.forEach(t => { if(t.date) { const ym = t.date.substring(0, 7); if(!months.includes(ym)) months.push(ym); } });
         months.sort();
-        months.forEach(ym => {
-            const [year, month] = ym.split('-');
-            monthSelect.innerHTML += `<option value="${ym}">${year}年 ${month}月</option>`;
-        });
+        months.forEach(ym => { const [year, month] = ym.split('-'); monthSelect.innerHTML += `<option value="${ym}">${year}年 ${month}月</option>`; });
         monthSelect.value = savedValue;
         if(monthSelect.selectedIndex === -1) monthSelect.value = "全部";
     }
@@ -461,7 +501,7 @@
         const date = document.getElementById('task-date').value;
         const priority = document.getElementById('task-priority').value;
         const status = document.getElementById('task-status').value;
-        const attachment = document.getElementById('task-attachment').value.trim(); // 取得附件
+        const attachment = document.getElementById('task-attachment').value.trim();
 
         if (!name) { alert('請輸入事件名稱內容！'); return; }
         if (!date) { alert('請選擇截止日期！'); return; }
@@ -469,7 +509,7 @@
         const newTask = { id: Date.now(), date, category, name, owner, priority, status, attachment };
         tasks.push(newTask);
         document.getElementById('task-name').value = '';
-        document.getElementById('task-attachment').value = ''; // 清空附件
+        document.getElementById('task-attachment').value = '';
         updateMonthFilterOptions();
         renderDashboard();
     }
@@ -477,12 +517,8 @@
     function startEditName(id, currentText, cellElement) {
         if (cellElement.querySelector('input, select')) return;
         const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'cell-inline-input';
-        input.value = currentText;
-        cellElement.innerHTML = '';
-        cellElement.appendChild(input);
-        input.focus();
+        input.type = 'text'; input.className = 'cell-inline-input'; input.value = currentText;
+        cellElement.innerHTML = ''; cellElement.appendChild(input); input.focus();
         function finishEdit() {
             const newText = input.value.trim() || currentText;
             tasks = tasks.map(t => { if (t.id === id) t.name = newText; return t; });
@@ -492,16 +528,11 @@
         input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
     }
 
-    // ⚡ 新增：行內修改附件連結的邏輯
     function startEditAttachment(id, currentLink, cellElement) {
         if (cellElement.querySelector('input, select')) return;
         const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'cell-inline-input';
-        input.value = currentLink;
-        cellElement.innerHTML = '';
-        cellElement.appendChild(input);
-        input.focus();
+        input.type = 'text'; input.className = 'cell-inline-input'; input.value = currentLink;
+        cellElement.innerHTML = ''; cellElement.appendChild(input); input.focus();
         function finishEdit() {
             const newLink = input.value.trim();
             tasks = tasks.map(t => { if (t.id === id) t.attachment = newLink; return t; });
@@ -514,12 +545,8 @@
     function startEditDate(id, currentDate, cellElement) {
         if (cellElement.querySelector('input, select')) return;
         const input = document.createElement('input');
-        input.type = 'date';
-        input.className = 'cell-inline-input';
-        input.value = currentDate;
-        cellElement.innerHTML = '';
-        cellElement.appendChild(input);
-        input.focus();
+        input.type = 'date'; input.className = 'cell-inline-input'; input.value = currentDate;
+        cellElement.innerHTML = ''; cellElement.appendChild(input); input.focus();
         function finishEdit() {
             const newDate = input.value || currentDate;
             tasks = tasks.map(t => { if (t.id === id) t.date = newDate; return t; });
@@ -532,62 +559,30 @@
 
     function startEditCategory(id, currentCategory, cellElement) {
         if (cellElement.querySelector('input, select')) return;
-        const select = document.createElement('select');
-        select.className = 'cell-inline-input';
-        config.categories.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c; opt.textContent = c;
-            if (c === currentCategory) opt.selected = true;
-            select.appendChild(opt);
-        });
-        cellElement.innerHTML = '';
-        cellElement.appendChild(select);
-        select.focus();
-        function finishEdit() {
-            const newCat = select.value;
-            tasks = tasks.map(t => { if (t.id === id) t.category = newCat; return t; });
-            renderDashboard();
-        }
-        select.onblur = finishEdit;
-        select.onchange = finishEdit;
+        const select = document.createElement('select'); select.className = 'cell-inline-input';
+        config.categories.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; if (c === currentCategory) opt.selected = true; select.appendChild(opt); });
+        cellElement.innerHTML = ''; cellElement.appendChild(select); select.focus();
+        function finishEdit() { const newCat = select.value; tasks = tasks.map(t => { if (t.id === id) t.category = newCat; return t; }); renderDashboard(); }
+        select.onblur = finishEdit; select.onchange = finishEdit;
     }
 
+    // 負責對象行內修改
     function startEditOwner(id, currentOwner, cellElement) {
         if (cellElement.querySelector('input, select')) return;
-        const select = document.createElement('select');
-        select.className = 'cell-inline-input';
-        config.owners.forEach(o => {
-            const opt = document.createElement('option');
-            opt.value = o; opt.textContent = o;
-            if (o === currentOwner) opt.selected = true;
-            select.appendChild(opt);
-        });
-        cellElement.innerHTML = '';
-        cellElement.appendChild(select);
-        select.focus();
-        function finishEdit() {
-            const newOwner = select.value;
-            tasks = tasks.map(t => { if (t.id === id) t.owner = newOwner; return t; });
-            renderDashboard();
-        }
-        select.onblur = finishEdit;
-        select.onchange = finishEdit;
+        const select = document.createElement('select'); select.className = 'cell-inline-input';
+        config.owners.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; if (o === currentOwner) opt.selected = true; select.appendChild(opt); });
+        cellElement.innerHTML = ''; cellElement.appendChild(select); select.focus();
+        function finishEdit() { const newOwner = select.value; tasks = tasks.map(t => { if (t.id === id) t.owner = newOwner; return t; }); renderDashboard(); }
+        select.onblur = finishEdit; select.onchange = finishEdit;
     }
 
     function toggleTaskStatus(id, isChecked) {
-        tasks = tasks.map(t => {
-            if (t.id === id) t.status = isChecked ? '已完成' : '進行中';
-            return t;
-        });
+        tasks = tasks.map(t => { if (t.id === id) t.status = isChecked ? '已完成' : '進行中'; return t; });
         renderDashboard();
     }
 
     function deleteTask(id) {
-        if(confirm('確定要刪除此項待辦嗎？')) {
-            tasks = tasks.filter(task => task.id !== id);
-            updateMonthFilterOptions();
-            renderDashboard();
-        }
+        if(confirm('確定要刪除此項待辦嗎？')) { tasks = tasks.filter(task => task.id !== id); updateMonthFilterOptions(); renderDashboard(); }
     }
 
     function renderDashboard() {
@@ -595,8 +590,7 @@
         const filterMonth = document.getElementById('filter-month').value;
         const filterCategory = document.getElementById('filter-category').value;
         const filterStatus = document.getElementById('filter-status').value;
-        const today = new Date();
-        today.setHours(0,0,0,0);
+        const today = new Date(); today.setHours(0,0,0,0);
 
         const filteredTasks = tasks.filter(t => {
             const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
@@ -621,7 +615,6 @@
                 const nameStyle = isDone ? 'task-text' : 'task-text editable-cell';
                 const cellStyle = isDone ? '' : 'editable-cell';
                 
-                // 處理附件顯示邏輯：有網址就秀按鈕，點擊可開啟新視窗，同時不阻礙點空白處進行修改
                 let attachHtml = "";
                 const linkUrl = t.attachment || "";
                 if(linkUrl) {
@@ -660,8 +653,6 @@
         } else {
             urgentTasks.forEach(t => {
                 const diffDays = Math.ceil((new Date(t.date) - today) / (1000 * 60 * 60 * 24));
-                
-                // 智慧急件區也順便支援附件一鍵直達
                 let urgentAttachHtml = "";
                 if(t.attachment) {
                     urgentAttachHtml = ` <a href="${t.attachment}" target="_blank" style="text-decoration:none; font-size:12px; color:#2563eb; font-weight:bold;">[📎查看資料]</a>`;
