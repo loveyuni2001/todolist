@@ -56,7 +56,6 @@
             -webkit-appearance: none;
         }
         
-        /* 📷 整合型上傳按鈕排版 */
         .upload-wrapper { display: flex; gap: 8px; width: 100%; }
         .btn-upload-trigger {
             background-color: #1e293b; color: white; border: none; padding: 0 15px;
@@ -75,7 +74,6 @@
         .urgent-meta { font-size: 11px; color: #e11d48; font-weight: bold; margin-bottom: 2px; }
         .no-data { color: #9ca3af; text-align: center; padding: 20px; font-size: 14px; }
         
-        /* 📅 日曆視圖 */
         .calendar-table { width: 100%; border-collapse: collapse; }
         .calendar-table th { background-color: #f8fafc; color: #475569; font-size: 13px; font-weight: bold; padding: 8px 6px; border: 1px solid #e2e8f0; }
         .calendar-table td { border: 1px solid #e2e8f0; width: 14.28%; height: 75px; vertical-align: top; padding: 6px; font-size: 13px; background-color: #ffffff; }
@@ -112,7 +110,10 @@
         .row-done .task-text { text-decoration: line-through; border-bottom: none; }
         .row-done .editable-cell { border-bottom: none; }
         
-        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        /* 💡 核心修正：強制讓狀態與日期欄位絕對不換行 */
+        .nowrap-cell { white-space: nowrap !important; }
+        
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; white-space: nowrap; }
         .status-未開始 { background-color: #fef3c7; color: #d97706; }
         .status-進行中 { background-color: #dbeafe; color: #2563eb; }
         .status-已完成 { background-color: #dcfce7; color: #16a34a; }
@@ -120,17 +121,16 @@
         .btn-attachment {
             display: inline-flex; align-items: center; background-color: #eff6ff; color: #2563eb;
             border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 12px;
-            font-weight: bold; text-decoration: none; margin-left: 6px; transition: 0.2s;
+            font-weight: bold; text-decoration: none; margin-left: 6px; transition: 0.2s; white-space: nowrap;
         }
         .btn-attachment:hover { background-color: #dbeafe; }
-        .empty-link { color: #94a3b8; font-style: italic; font-size: 12px; }
+        .empty-link { color: #94a3b8; font-style: italic; font-size: 12px; white-space: nowrap; }
 
         .btn-delete { background: none; border: none; cursor: pointer; color: #ef4444; font-size: 16px; }
         .chk-box { width: 16px; height: 16px; cursor: pointer; }
         
         .loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; justify-content:center; align-items:center; font-size:18px; font-weight:bold; color:#111827; }
 
-        /* 📱 手機版完美並排與優化 */
         @media (max-width: 768px) {
             body { padding: 10px; }
             .main-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -145,7 +145,6 @@
             .form-row:nth-child(1) .form-group:nth-child(2) { 
                 grid-column: span 2; 
             }
-            /* 讓附件欄位一列拉滿，拍照按鈕不被擠壓 */
             .form-row:nth-child(3) .form-group:nth-child(1) {
                 grid-column: span 2;
             }
@@ -334,12 +333,10 @@
         loadDataFromGoogleSheets();
     };
 
-    // ⚡ 核心新功能：處理網頁端直接拍照或選檔案背景上傳
     function handleFileDirectUpload(fileInput) {
         const file = fileInput.files[0];
         if (!file) return;
 
-        // 限制大於 20MB 的極大檔案，避免傳輸逾時
         if (file.size > 20 * 1024 * 1024) {
             alert("檔案太大了（請小於 20MB），建議先進行圖片壓縮喔！");
             fileInput.value = "";
@@ -366,7 +363,6 @@
             .then(res => res.json())
             .then(resData => {
                 if (resData.status === "Success" && resData.url) {
-                    // 自動把得到的 Google Drive 瀏覽網址填進去！
                     document.getElementById('task-attachment').value = resData.url;
                     alert("🎉 檔案上傳成功！已自動帶入雲端硬碟連結。");
                 } else {
@@ -378,12 +374,22 @@
                 alert("上傳至雲端時連線逾時，請確認 Apps Script 部署與資料夾 ID 是否正確。");
             })
             .finally(() => {
-                fileInput.value = ""; // 清空，讓同一個檔案可以重複選
+                fileInput.value = "";
                 document.getElementById('loading-mask').innerText = "⏳ 雲端資料同步中，請稍候...";
                 document.getElementById('loading-mask').style.display = 'none';
             });
         };
         reader.readAsDataURL(file);
+    }
+
+    // 💡 輔助函式：清理日期文字，只保留 YYYY/MM/DD
+    function cleanDateStr(rawDate) {
+        if (!rawDate) return "";
+        let str = rawDate.toString().trim();
+        if (str.includes("T")) {
+            str = str.split("T")[0];
+        }
+        return str.replace(/-/g, '/');
     }
 
     function loadDataFromGoogleSheets() {
@@ -406,6 +412,8 @@
                 if(resData.tasks) {
                     tasks = resData.tasks.map(t => {
                         if (t.attachment === undefined) t.attachment = "";
+                        // 初始化時直接洗乾淨日期
+                        t.date = cleanDateStr(t.date);
                         return t;
                     });
                 }
@@ -432,7 +440,12 @@
             return;
         }
         document.getElementById('loading-mask').style.display = 'flex';
-        const payload = { tasks: tasks, config: config };
+        const cleanedTasks = tasks.map(t => {
+            let clone = Object.assign({}, t);
+            clone.date = cleanDateStr(clone.date);
+            return clone;
+        });
+        const payload = { tasks: cleanedTasks, config: config };
         fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
         .then(res => res.text())
         .then(text => {
@@ -487,7 +500,7 @@
         const savedValue = monthSelect.value;
         monthSelect.innerHTML = '<option value="全部">📅 全部月份</option>';
         const months = [];
-        tasks.forEach(t => { if(t.date) { const ym = t.date.substring(0, 7); if(!months.includes(ym)) months.push(ym); } });
+        tasks.forEach(t => { if(t.date) { const ym = cleanDateStr(t.date).substring(0, 7).replace(/\//g, '-'); if(!months.includes(ym)) months.push(ym); } });
         months.sort();
         months.forEach(ym => { const [year, month] = ym.split('-'); monthSelect.innerHTML += `<option value="${ym}">${year}年 ${month}月</option>`; });
         monthSelect.value = savedValue;
@@ -498,7 +511,7 @@
         const category = document.getElementById('task-category').value;
         const name = document.getElementById('task-name').value.trim();
         const owner = document.getElementById('task-owner').value;
-        const date = document.getElementById('task-date').value;
+        let date = document.getElementById('task-date').value;
         const priority = document.getElementById('task-priority').value;
         const status = document.getElementById('task-status').value;
         const attachment = document.getElementById('task-attachment').value.trim();
@@ -506,6 +519,7 @@
         if (!name) { alert('請輸入事件名稱內容！'); return; }
         if (!date) { alert('請選擇截止日期！'); return; }
 
+        date = cleanDateStr(date);
         const newTask = { id: Date.now(), date, category, name, owner, priority, status, attachment };
         tasks.push(newTask);
         document.getElementById('task-name').value = '';
@@ -545,10 +559,10 @@
     function startEditDate(id, currentDate, cellElement) {
         if (cellElement.querySelector('input, select')) return;
         const input = document.createElement('input');
-        input.type = 'date'; input.className = 'cell-inline-input'; input.value = currentDate;
+        input.type = 'date'; input.className = 'cell-inline-input'; input.value = currentDate.replace(/\//g, '-');
         cellElement.innerHTML = ''; cellElement.appendChild(input); input.focus();
         function finishEdit() {
-            const newDate = input.value || currentDate;
+            const newDate = cleanDateStr(input.value) || currentDate;
             tasks = tasks.map(t => { if (t.id === id) t.date = newDate; return t; });
             updateMonthFilterOptions();
             renderDashboard();
@@ -566,7 +580,6 @@
         select.onblur = finishEdit; select.onchange = finishEdit;
     }
 
-    // 負責對象行內修改
     function startEditOwner(id, currentOwner, cellElement) {
         if (cellElement.querySelector('input, select')) return;
         const select = document.createElement('select'); select.className = 'cell-inline-input';
@@ -590,11 +603,12 @@
         const filterMonth = document.getElementById('filter-month').value;
         const filterCategory = document.getElementById('filter-category').value;
         const filterStatus = document.getElementById('filter-status').value;
-        const today = new Date(); today.setHours(0,0,0,0);
 
         const filteredTasks = tasks.filter(t => {
             const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
-            const matchMonth = (filterMonth === '全部' || t.date.startsWith(filterMonth));
+            const tYm = cleanDateStr(t.date).substring(0, 7).replace(/\//g, '-');
+            const fYm = filterMonth.replace(/\//g, '-');
+            const matchMonth = (filterMonth === '全部' || tYm === fYm);
             const matchCategory = (filterCategory === '全部' || t.category === filterCategory);
             let matchStatus = true;
             if (filterStatus === '未完成') matchStatus = (t.status !== '已完成');
@@ -607,13 +621,14 @@
         if(filteredTasks.length === 0) {
             todoBody.innerHTML = `<tr><td colspan="9" class="no-data">沒有符合篩選條件的項目</td></tr>`;
         } else {
-            filteredTasks.sort((a,b) => new Date(a.date) - new Date(b.date));
+            filteredTasks.sort((a,b) => new Date(cleanDateStr(a.date)) - new Date(cleanDateStr(b.date)));
             filteredTasks.forEach(t => {
                 const isDone = t.status === '已完成';
                 const rowClass = isDone ? 'class="row-done"' : '';
                 const chkAttribute = isDone ? 'checked' : '';
                 const nameStyle = isDone ? 'task-text' : 'task-text editable-cell';
                 const cellStyle = isDone ? '' : 'editable-cell';
+                const cleanDate = cleanDateStr(t.date);
                 
                 let attachHtml = "";
                 const linkUrl = t.attachment || "";
@@ -626,75 +641,21 @@
                 todoBody.innerHTML += `
                     <tr ${rowClass}>
                         <td style="text-align:center;"><input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${chkAttribute}></td>
-                        <td onclick="${isDone ? '' : `startEditDate(${t.id}, '${t.date}', this)`}"><span class="${cellStyle}"><strong>${t.date.replace(/-/g, '/')}</strong></span></td>
+                        <td class="nowrap-cell" onclick="${isDone ? '' : `startEditDate(${t.id}, '${cleanDate}', this)`}"><span class="${cellStyle}"><strong>${cleanDate}</strong></span></td>
                         <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span class="${cellStyle}">${t.category}</span></td>
                         <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}"><span class="${nameStyle}">${t.name}</span></td>
                         
                         <td onclick="${isDone ? '' : `startEditAttachment(${t.id}, '${linkUrl.replace(/'/g, "\\'")}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${attachHtml}</span></td>
                         
                         <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}"><span class="${cellStyle}">${t.owner}</span></td>
-                        <td style="font-weight:bold;">${t.priority}</td>
-                        <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+                        <td class="nowrap-cell" style="font-weight:bold;">${t.priority}</td>
+                        <td class="nowrap-cell"><span class="status-badge status-${t.status}">${t.status}</span></td>
                         <td style="text-align:center;"><button class="btn-delete" onclick="deleteTask(${t.id})">🗑️</button></td>
                     </tr>
                 `;
             });
         }
-
-        const urgentContainer = document.getElementById('urgent-container');
-        urgentContainer.innerHTML = '';
-        const urgentTasks = tasks.filter(t => {
-            const diffTime = new Date(t.date) - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays >= 0 && diffDays <= 7 && t.status !== '已完成';
-        });
-        if(urgentTasks.length === 0) {
-            urgentContainer.innerHTML = `<div class="no-data">☕ 太棒了！目前一週內沒有緊迫的未完成事件。</div>`;
-        } else {
-            urgentTasks.forEach(t => {
-                const diffDays = Math.ceil((new Date(t.date) - today) / (1000 * 60 * 60 * 24));
-                let urgentAttachHtml = "";
-                if(t.attachment) {
-                    urgentAttachHtml = ` <a href="${t.attachment}" target="_blank" style="text-decoration:none; font-size:12px; color:#2563eb; font-weight:bold;">[📎查看資料]</a>`;
-                }
-
-                urgentContainer.innerHTML += `
-                    <div class="urgent-item">
-                        <div class="urgent-meta">⚠️ 剩餘 ${diffDays} 天 | 截止日: ${t.date.replace(/-/g, '/')}</div>
-                        <strong>【${t.category}】</strong> ${t.name} (${t.owner})${urgentAttachHtml}
-                    </div>
-                `;
-            });
-        }
-        renderCalendar(today);
-    }
-
-    function renderCalendar(today) {
-        const calendarBody = document.getElementById('calendar-body');
-        calendarBody.innerHTML = '';
-        let startGrid = new Date(today);
-        startGrid.setDate(today.getDate() - today.getDay());
-        let html = '<tr>';
-        for (let i = 0; i < 14; i++) {
-            if (i > 0 && i % 7 === 0) html += '</tr><tr>';
-            let currentGridDate = new Date(startGrid);
-            currentGridDate.setDate(startGrid.getDate() + i);
-            let dateStr = currentGridDate.toISOString().split('T')[0];
-            let isToday = dateStr === today.toISOString().split('T')[0] ? 'class="today"' : '';
-            let dayDisplay = currentGridDate.getDate();
-            if(dateStr === today.toISOString().split('T')[0]) dayDisplay += ' (今)';
-            let dayTasks = tasks.filter(t => t.date === dateStr);
-            let tagsHtml = '';
-            dayTasks.forEach(t => {
-                const doneClass = t.status === '已完成' ? 'done' : '';
-                tagsHtml += `<span class="calendar-tag ${doneClass}" title="${t.name}">${t.name}</span>`;
-            });
-            html += `<td ${isToday}><span class="calendar-day-num">${dayDisplay}</span>${tagsHtml}</td>`;
-        }
-        html += '</tr>';
-        calendarBody.innerHTML = html;
     }
 </script>
-
 </body>
 </html>
