@@ -70,10 +70,13 @@
 
         .btn-submit { background-color: #111827; color: #ffffff; border: none; width: 100%; padding: 12px; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; margin-top: 5px; height: 42px; }
         .btn-submit:hover { background-color: #1f2937; }
+        
+        /* 急件提醒樣式 */
         .urgent-item { background-color: #fff1f2; border-left: 4px solid #f43f5e; padding: 10px; border-radius: 4px; margin-bottom: 10px; font-size: 13px; }
         .urgent-meta { font-size: 11px; color: #e11d48; font-weight: bold; margin-bottom: 2px; }
         .no-data { color: #9ca3af; text-align: center; padding: 20px; font-size: 14px; }
         
+        /* 日曆表格樣式 */
         .calendar-table { width: 100%; border-collapse: collapse; }
         .calendar-table th { background-color: #f8fafc; color: #475569; font-size: 13px; font-weight: bold; padding: 8px 6px; border: 1px solid #e2e8f0; }
         .calendar-table td { border: 1px solid #e2e8f0; width: 14.28%; height: 75px; vertical-align: top; padding: 6px; font-size: 13px; background-color: #ffffff; }
@@ -110,7 +113,6 @@
         .row-done .task-text { text-decoration: line-through; border-bottom: none; }
         .row-done .editable-cell { border-bottom: none; }
         
-        /* 💡 核心修正：強制讓狀態與日期欄位絕對不換行 */
         .nowrap-cell { white-space: nowrap !important; }
         
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; white-space: nowrap; }
@@ -382,7 +384,6 @@
         reader.readAsDataURL(file);
     }
 
-    // 💡 輔助函式：清理日期文字，只保留 YYYY/MM/DD
     function cleanDateStr(rawDate) {
         if (!rawDate) return "";
         let str = rawDate.toString().trim();
@@ -412,7 +413,6 @@
                 if(resData.tasks) {
                     tasks = resData.tasks.map(t => {
                         if (t.attachment === undefined) t.attachment = "";
-                        // 初始化時直接洗乾淨日期
                         t.date = cleanDateStr(t.date);
                         return t;
                     });
@@ -528,6 +528,83 @@
         renderDashboard();
     }
 
+    /* 💡 補回功能一：渲染 7 天內急件提醒區塊 */
+    function renderUrgentTasks() {
+        const container = document.getElementById('urgent-container');
+        container.innerHTML = '';
+        
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const sevenDaysLater = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        const urgentList = tasks.filter(t => {
+            if (t.status === '已完成') return false;
+            if (!t.date) return false;
+            const tDate = new Date(cleanDateStr(t.date));
+            tDate.setHours(0,0,0,0);
+            return tDate >= today && tDate <= sevenDaysLater;
+        });
+
+        if (urgentList.length === 0) {
+            container.innerHTML = '<div class="no-data">☀️ 太棒了！近期一週內無即將截止的未完成急件。</div>';
+            return;
+        }
+
+        urgentList.sort((a,b) => new Date(cleanDateStr(a.date)) - new Date(cleanDateStr(b.date)));
+        urgentList.forEach(t => {
+            container.innerHTML += `
+                <div class="urgent-item">
+                    <div class="urgent-meta">⏰ 截止日: ${cleanDateStr(t.date)} | 負責人: ${t.owner} [${t.priority}]</div>
+                    <strong>[${t.category}]</strong> ${t.name}
+                </div>
+            `;
+        });
+    }
+
+    /* 💡 補回功能二：渲染今日起雙週精簡日曆視圖 */
+    function renderCalendar() {
+        const tbody = document.getElementById('calendar-body');
+        tbody.innerHTML = '';
+        
+        const today = new Date();
+        const startDayOfWeek = today.getDay(); 
+        const calendarStart = new Date(today.getTime() - startDayOfWeek * 24 * 60 * 60 * 1000);
+
+        let currentPointer = new Date(calendarStart.getTime());
+        
+        for (let row = 0; row < 2; row++) {
+            let tr = document.createElement('tr');
+            for (let col = 0; col < 7; col++) {
+                let td = document.createElement('td');
+                let dateStr = `${currentPointer.getFullYear()}/${String(currentPointer.getMonth()+1).padStart(2,'0')}/${String(currentPointer.getDate()).padStart(2,'0')}`;
+                
+                // 標記今天
+                if (currentPointer.toDateString() === today.toDateString()) {
+                    td.className = 'today';
+                }
+
+                let dayNumSpan = document.createElement('span');
+                dayNumSpan.className = 'calendar-day-num';
+                dayNumSpan.innerText = currentPointer.getDate();
+                td.appendChild(dayNumSpan);
+
+                // 撈出這天的任務並放進日曆
+                const dayTasks = tasks.filter(t => cleanDateStr(t.date) === dateStr);
+                dayTasks.forEach(t => {
+                    let tag = document.createElement('span');
+                    tag.className = 'calendar-tag' + (t.status === '已完成' ? ' done' : '');
+                    tag.title = `[${t.owner}] ${t.name}`;
+                    tag.innerText = `[${t.owner}] ${t.name}`;
+                    td.appendChild(tag);
+                });
+
+                tr.appendChild(td);
+                currentPointer.setDate(currentPointer.getDate() + 1);
+            }
+            tbody.appendChild(tr);
+        }
+    }
+
     function startEditName(id, currentText, cellElement) {
         if (cellElement.querySelector('input, select')) return;
         const input = document.createElement('input');
@@ -599,6 +676,10 @@
     }
 
     function renderDashboard() {
+        // 💡 每次刷新清單時，同步重畫上方的「急件提醒」與「日曆圖」
+        renderUrgentTasks();
+        renderCalendar();
+
         const filterOwner = document.getElementById('filter-owner').value;
         const filterMonth = document.getElementById('filter-month').value;
         const filterCategory = document.getElementById('filter-category').value;
