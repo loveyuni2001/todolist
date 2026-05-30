@@ -741,23 +741,19 @@
     } else {
         filteredTasks.sort((a,b) => cleanDateStr(a.date).localeCompare(cleanDateStr(b.date))).forEach(t => {
             const isDone = t.status === '已完成';
-            const rowClass = isDone ? 'class="row-done"' : '';
-            const chkAttribute = isDone ? 'checked' : '';
             const cleanDate = cleanDateStr(t.date);
-            
-            // 建立行
             const tr = document.createElement('tr');
             if(isDone) tr.className = 'row-done';
             
-            // 這裡新增 onclick 觸發展開，但排除 checkbox 和按鈕區塊
+            // 這裡就是「點擊觸發」的開關
             tr.onclick = (e) => {
-                if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A' && e.target.tagName !== 'TEXTAREA') {
                     toggleDetail(t.id, tr);
                 }
             };
 
             tr.innerHTML = `
-                <td style="text-align:center;"><input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${chkAttribute}></td>
+                <td style="text-align:center;"><input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${isDone ? 'checked' : ''}></td>
                 <td class="nowrap-cell" onclick="${isDone ? '' : `startEditDate(${t.id}, '${cleanDate}', this)`}"><span class="${isDone ? '' : 'editable-cell'}"><strong>${cleanDate}</strong></span></td>
                 <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${t.category}</span></td>
                 <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}"><span class="${isDone ? 'task-text' : 'task-text editable-cell'}">${t.name}</span></td>
