@@ -79,13 +79,14 @@
         .todo-table td { padding: 10px; font-size: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .todo-table tr:hover td { background-color: #f8fafc; }
         
-        /* 可編輯格子的效果 */
+        /* 可編輯格子的藍色小虛線提示 */
         .editable-cell { cursor: pointer; border-bottom: 1px dotted #2563eb; padding: 4px; border-radius: 4px; }
         .editable-cell:hover { background-color: #f0fdf4; color: #2563eb; }
         .cell-inline-input { width: 100%; padding: 4px 6px; font-size: 14px; border: 1px solid #2563eb; border-radius: 4px; background-color: #fff; }
 
         .row-done { color: #94a3b8; background-color: #f8fafc; }
         .row-done .task-text { text-decoration: line-through; border-bottom: none; }
+        .row-done .editable-cell { border-bottom: none; }
         
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
         .status-未開始 { background-color: #fef3c7; color: #d97706; }
@@ -177,13 +178,16 @@
 
     <div class="data-panel">
         <div class="filter-bar">
-            <div class="filter-left">📊 03 目前所有項目清單 <span style="font-size:11px; font-weight:normal; color:#6b7280;">(內容與日期可點擊直接修改)</span></div>
+            <div class="filter-left">📊 03 目前所有項目清單 <span style="font-size:11px; font-weight:normal; color:#6b7280;">(內容、日期、分類、成員皆可點擊直接修正)</span></div>
             <div class="filter-controls">
                 <select id="filter-owner" class="inline-select" onchange="renderDashboard()">
                     <option value="全部">👥 全部成員</option>
                 </select>
                 <select id="filter-month" class="inline-select" onchange="renderDashboard()">
                     <option value="全部">📅 全部月份</option>
+                </select>
+                <select id="filter-category" class="inline-select" onchange="renderDashboard()">
+                    <option value="全部">🏷️ 全部分類</option>
                 </select>
                 <select id="filter-status" class="inline-select" onchange="renderDashboard()">
                     <option value="全部">🔍 全部狀態</option>
@@ -197,10 +201,10 @@
             <thead>
                 <tr>
                     <th style="width: 5%; text-align: center;">紀錄</th>
-                    <th style="width: 15%;">截止日期 (可改)</th>
-                    <th style="width: 15%;">大項目分類</th>
-                    <th style="width: 35%;">待辦事件內容 (雙擊可改)</th>
-                    <th style="width: 10%;">負責</th>
+                    <th style="width: 14%;">截止日期 (可改)</th>
+                    <th style="width: 16%;">大項目分類 (可改)</th>
+                    <th style="width: 32%;">待辦事件內容 (雙擊可改)</th>
+                    <th style="width: 10%;">負責 (可改)</th>
                     <th style="width: 8%;">優先權</th>
                     <th style="width: 10%;">狀態</th>
                     <th style="width: 5%; text-align: center;">操作</th>
@@ -272,22 +276,29 @@
         renderDashboard();
     }
 
-    // 將自訂選項套用到所有下拉選單
+    // 將自訂選項套用到所有下拉選單與篩選欄位
     function applyConfigUI() {
-        // 1. 套用大分類
+        // 1. 套用新增區的大分類
         const catSelect = document.getElementById('task-category');
         catSelect.innerHTML = config.categories.map(c => `<option value="${c}">${c}</option>`).join('');
         
-        // 2. 套用新增成員
+        // 2. 套用新增區的負責人
         const ownerSelect = document.getElementById('task-owner');
         ownerSelect.innerHTML = config.owners.map(o => `<option value="${o}">${o}</option>`).join('');
         
-        // 3. 套用篩選器成員
+        // 3. 套用篩選區的成員
         const filterOwner = document.getElementById('filter-owner');
-        const currentSelected = filterOwner.value;
+        const currentOwnerVal = filterOwner.value;
         filterOwner.innerHTML = '<option value="全部">👥 全部成員</option>' + config.owners.map(o => `<option value="${o}">${o}</option>`).join('');
-        filterOwner.value = currentSelected;
+        filterOwner.value = currentOwnerVal;
         if (filterOwner.selectedIndex === -1) filterOwner.value = "全部";
+
+        // 💡 核心新增：4. 套用篩選區的分類
+        const filterCat = document.getElementById('filter-category');
+        const currentCatVal = filterCat.value;
+        filterCat.innerHTML = '<option value="全部">🏷️ 全部分類</option>' + config.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        filterCat.value = currentCatVal;
+        if (filterCat.selectedIndex === -1) filterCat.value = "全部";
     }
 
     // 動態搜集現有資料中的「年份-月份」
@@ -332,10 +343,9 @@
         renderDashboard();
     }
 
-    // 💡 核心新增：表格內「文字直接修改」觸發函數
+    // 💡 核心功能：表格內「文字直接修改」
     function startEditName(id, currentText, cellElement) {
-        // 如果已經在編輯中，就不要重複觸發
-        if (cellElement.querySelector('input')) return;
+        if (cellElement.querySelector('input, select')) return;
 
         const input = document.createElement('input');
         input.type = 'text';
@@ -345,23 +355,18 @@
         cellElement.appendChild(input);
         input.focus();
 
-        // 當失去焦點或按 Enter 時儲存
         function finishEdit() {
             const newText = input.value.trim() || currentText;
-            tasks = tasks.map(t => {
-                if (t.id === id) t.name = newText;
-                return t;
-            });
+            tasks = tasks.map(t => { if (t.id === id) t.name = newText; return t; });
             renderDashboard();
         }
-
         input.onblur = finishEdit;
         input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
     }
 
-    // 💡 核心新增：表格內「日期直接修改」觸發函數
+    // 💡 核心功能：表格內「日期直接修改」
     function startEditDate(id, currentDate, cellElement) {
-        if (cellElement.querySelector('input')) return;
+        if (cellElement.querySelector('input, select')) return;
 
         const input = document.createElement('input');
         input.type = 'date';
@@ -373,16 +378,68 @@
 
         function finishEdit() {
             const newDate = input.value || currentDate;
-            tasks = tasks.map(t => {
-                if (t.id === id) t.date = newDate;
-                return t;
-            });
+            tasks = tasks.map(t => { if (t.id === id) t.date = newDate; return t; });
             updateMonthFilterOptions();
             renderDashboard();
         }
-
         input.onblur = finishEdit;
         input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
+    }
+
+    // 💡 全新功能：表格內「大項目分類直接下拉修改」
+    function startEditCategory(id, currentCategory, cellElement) {
+        if (cellElement.querySelector('input, select')) return;
+
+        const select = document.createElement('select');
+        select.className = 'cell-inline-input';
+        
+        // 帶入當前使用者自訂的所有分類
+        config.categories.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.textContent = c;
+            if (c === currentCategory) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        cellElement.innerHTML = '';
+        cellElement.appendChild(select);
+        select.focus();
+
+        function finishEdit() {
+            const newCat = select.value;
+            tasks = tasks.map(t => { if (t.id === id) t.category = newCat; return t; });
+            renderDashboard();
+        }
+        select.onblur = finishEdit;
+        select.onchange = finishEdit;
+    }
+
+    // 💡 全新功能：表格內「負責對象直接下拉修改」
+    function startEditOwner(id, currentOwner, cellElement) {
+        if (cellElement.querySelector('input, select')) return;
+
+        const select = document.createElement('select');
+        select.className = 'cell-inline-input';
+        
+        // 帶入當前使用者自訂的所有成員
+        config.owners.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o; opt.textContent = o;
+            if (o === currentOwner) opt.selected = true;
+            select.appendChild(opt);
+        });
+
+        cellElement.innerHTML = '';
+        cellElement.appendChild(select);
+        select.focus();
+
+        function finishEdit() {
+            const newOwner = select.value;
+            tasks = tasks.map(t => { if (t.id === id) t.owner = newOwner; return t; });
+            renderDashboard();
+        }
+        select.onblur = finishEdit;
+        select.onchange = finishEdit;
     }
 
     // 勾選狀態切換
@@ -403,24 +460,30 @@
         }
     }
 
-    // 核心網頁渲染
+    // 核心網頁渲染（支援四重複合篩選）
     function renderDashboard() {
         const filterOwner = document.getElementById('filter-owner').value;
         const filterMonth = document.getElementById('filter-month').value;
+        const filterCategory = document.getElementById('filter-category').value;
         const filterStatus = document.getElementById('filter-status').value;
+        
         const today = new Date();
         today.setHours(0,0,0,0);
 
+        // 進行四重組合篩選
         const filteredTasks = tasks.filter(t => {
             const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
             const matchMonth = (filterMonth === '全部' || t.date.startsWith(filterMonth));
+            const matchCategory = (filterCategory === '全部' || t.category === filterCategory);
+            
             let matchStatus = true;
             if (filterStatus === '未完成') matchStatus = (t.status !== '已完成');
             else if (filterStatus === '已完成') matchStatus = (t.status === '已完成');
-            return matchOwner && matchMonth && matchStatus;
+            
+            return matchOwner && matchMonth && matchCategory && matchStatus;
         });
 
-        // 1. 渲染第三區
+        // 1. 渲染第三區表格
         const todoBody = document.getElementById('todo-body');
         todoBody.innerHTML = '';
         
@@ -433,9 +496,9 @@
                 const rowClass = isDone ? 'class="row-done"' : '';
                 const chkAttribute = isDone ? 'checked' : '';
 
-                // 為未完成的任務加上可編輯樣式 class
-                const editableClass = isDone ? 'task-text' : 'task-text editable-cell';
-                const dateEditableClass = isDone ? '' : 'editable-cell';
+                // 設定未完成的格子擁有雙擊/點擊修改樣式
+                const nameStyle = isDone ? 'task-text' : 'task-text editable-cell';
+                const cellStyle = isDone ? '' : 'editable-cell';
 
                 todoBody.innerHTML += `
                     <tr ${rowClass}>
@@ -443,13 +506,17 @@
                             <input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${chkAttribute}>
                         </td>
                         <td onclick="${isDone ? '' : `startEditDate(${t.id}, '${t.date}', this)`}">
-                            <span class="${dateEditableClass}"><strong>${t.date.replace(/-/g, '/')}</strong></span>
+                            <span class="${cellStyle}"><strong>${t.date.replace(/-/g, '/')}</strong></span>
                         </td>
-                        <td>${t.category}</td>
+                        <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}">
+                            <span class="${cellStyle}">${t.category}</span>
+                        </td>
                         <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}">
-                            <span class="${editableClass}">${t.name}</span>
+                            <span class="${nameStyle}">${t.name}</span>
                         </td>
-                        <td>${t.owner}</td>
+                        <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}">
+                            <span class="${cellStyle}">${t.owner}</span>
+                        </td>
                         <td style="font-weight:bold;">${t.priority}</td>
                         <td><span class="status-badge status-${t.status}">${t.status}</span></td>
                         <td style="text-align:center;"><button class="btn-delete" onclick="deleteTask(${t.id})">🗑️</button></td>
@@ -458,7 +525,7 @@
             });
         }
 
-        // 2. 渲染第0區
+        // 2. 渲染第0區智慧急件
         const urgentContainer = document.getElementById('urgent-container');
         urgentContainer.innerHTML = '';
         
@@ -482,7 +549,7 @@
             });
         }
 
-        // 3. 渲染日曆
+        // 3. 渲染行事曆
         renderCalendar(today);
     }
 
@@ -517,7 +584,7 @@
     }
 
     function syncToGoogleSheets() {
-        alert('前端修改與客製設定已就緒！\n接下來可為您準備試算表的 Apps Script 連線碼。');
+        alert('前端四重大篩選與全欄位直接修正已就緒！\n接下來隨時可以幫您串接 Google 試算表。');
     }
 </script>
 
