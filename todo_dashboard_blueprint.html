@@ -415,13 +415,33 @@
         }
     }
 
-    function loadDataFromGoogleSheets() {
-        if(!API_URL || API_URL.includes("您的全新_Google")) {
-            applyConfigUI();
-            updateMonthFilterOptions();
-            renderDashboard();
-            return;
-        }
+   function loadDataFromGoogleSheets() {
+    // 檢查 API_URL 是否正確，如果還沒設定好，就直接執行 UI 更新並結束函式
+    if (!API_URL || API_URL.includes("您的全新_Google")) {
+        applyConfigUI();
+        updateMonthFilterOptions();
+        renderDashboard();
+        return; // 這裡的 return 是合法的，因為它被包在 if 的 { } 裡面
+    }
+
+    // 接下來才是正常的載入邏輯
+    document.getElementById('loading-mask').style.display = 'flex';
+    fetch(API_URL)
+        .then(res => res.json())
+        .then(resData => {
+            if (resData.tasks) {
+                // 這裡加入我們之前談好的 description 處理
+                tasks = resData.tasks.map(t => ({
+                    ...t,
+                    description: t.description || ""
+                }));
+                renderDashboard();
+                renderCalendar();
+            }
+            // ... 後面原本處理 config 的代碼 ...
+        })
+        .catch(err => console.error("載入失敗:", err));
+}
         document.getElementById('loading-mask').style.display = 'flex';
         fetch(API_URL)
         .then(res => res.json())
