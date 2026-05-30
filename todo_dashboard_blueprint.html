@@ -48,7 +48,6 @@
         }
         input:focus, select:focus { border-color: #111827; outline: none; background-color: #ffffff; }
         
-        /* 彈出客製化設定視窗 */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-content { background: white; padding: 25px; border-radius: 12px; border: 2px solid #111827; width: 90%; max-width: 500px; }
         .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; }
@@ -59,7 +58,6 @@
         .urgent-meta { font-size: 11px; color: #e11d48; font-weight: bold; margin-bottom: 2px; }
         .no-data { color: #9ca3af; text-align: center; padding: 20px; font-size: 14px; }
         
-        /* 日曆與表格樣式 */
         .calendar-table { width: 100%; border-collapse: collapse; }
         .calendar-table th { background-color: #f1f5f9; color: #475569; font-size: 12px; padding: 6px; border: 1px solid #e2e8f0; }
         .calendar-table td { border: 1px solid #e2e8f0; width: 14.28%; height: 65px; vertical-align: top; padding: 4px; font-size: 11px; background-color: #ffffff; }
@@ -79,7 +77,6 @@
         .todo-table td { padding: 10px; font-size: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .todo-table tr:hover td { background-color: #f8fafc; }
         
-        /* 可編輯格子的藍色小虛線提示 */
         .editable-cell { cursor: pointer; border-bottom: 1px dotted #2563eb; padding: 4px; border-radius: 4px; }
         .editable-cell:hover { background-color: #f0fdf4; color: #2563eb; }
         .cell-inline-input { width: 100%; padding: 4px 6px; font-size: 14px; border: 1px solid #2563eb; border-radius: 4px; background-color: #fff; }
@@ -95,9 +92,13 @@
         
         .btn-delete { background: none; border: none; cursor: pointer; color: #ef4444; font-size: 16px; }
         .chk-box { width: 16px; height: 16px; cursor: pointer; }
+        
+        .loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; justify-content:center; align-items:center; font-size:18px; font-weight:bold; color:#111827; }
     </style>
 </head>
 <body>
+
+<div id="loading-mask" class="loading-overlay">⏳ 雲端資料同步中，請稍候...</div>
 
 <div class="container">
     <div class="header-bar">
@@ -107,7 +108,7 @@
         </div>
         <div class="header-buttons">
             <button class="btn-settings" onclick="toggleModal(true)">⚙️ 自訂選單設定</button>
-            <button class="btn-sync" onclick="syncToGoogleSheets()">🔄 同步至 Google Sheets 備份</button>
+            <button class="btn-sync" onclick="syncToGoogleSheets()">💾 儲存並同步至雲端</button>
         </div>
     </div>
 
@@ -178,7 +179,7 @@
 
     <div class="data-panel">
         <div class="filter-bar">
-            <div class="filter-left">📊 03 目前所有項目清單 <span style="font-size:11px; font-weight:normal; color:#6b7280;">(內容、日期、分類、成員皆可點擊直接修正)</span></div>
+            <div class="filter-left">📊 03 目前所有項目清單 <span style="font-size:11px; font-weight:normal; color:#6b7280;">(修改後請記得點右上角「儲存並同步至雲端」)</span></div>
             <div class="filter-controls">
                 <select id="filter-owner" class="inline-select" onchange="renderDashboard()">
                     <option value="全部">👥 全部成員</option>
@@ -201,10 +202,10 @@
             <thead>
                 <tr>
                     <th style="width: 5%; text-align: center;">紀錄</th>
-                    <th style="width: 14%;">截止日期 (可改)</th>
-                    <th style="width: 16%;">大項目分類 (可改)</th>
-                    <th style="width: 32%;">待辦事件內容 (雙擊可改)</th>
-                    <th style="width: 10%;">負責 (可改)</th>
+                    <th style="width: 14%;">截止日期</th>
+                    <th style="width: 16%;">大項目分類</th>
+                    <th style="width: 32%;">待辦事件內容 (點擊可改)</th>
+                    <th style="width: 10%;">負責</th>
                     <th style="width: 8%;">優先權</th>
                     <th style="width: 10%;">狀態</th>
                     <th style="width: 5%; text-align: center;">操作</th>
@@ -237,356 +238,59 @@
 </div>
 
 <script>
-    // 預設核心成員與項目分類
-    let config = {
-        owners: ["妃", "通", "爸爸", "媽媽", "全家"],
-        categories: ["💼 財務投資", "📊 公司稅務", "🏠 家用日常", "🍎 健康管理", "🎮 復古電玩"]
-    };
-
-    // 預設核心任務資料庫項目
-    let tasks = [
-        { id: 1, date: "2026-05-30", category: "🍎 健康管理", name: "製作週末藍莓高蛋白奶昔與優格材料補貨", owner: "妃", priority: "🟢 低", status: "已完成" },
-        { id: 2, date: "2026-06-01", category: "📊 公司稅務", name: "五月營業稅申報資料與憑證最終核對", owner: "妃", priority: "🔴 高", status: "進行中" },
-        { id: 3, date: "2026-06-04", category: "🏠 家用日常", name: "幫媽媽訂購端午節素食粽子禮盒", owner: "媽媽", priority: "🟡 中", status: "未開始" },
-        { id: 4, date: "2026-06-05", category: "💼 財務投資", name: "美股 Firstrade 帳戶定期定額 VOO / QQQ 資金匯入確認", owner: "妃", priority: "🟡 中", status: "未開始" }
-    ];
-
-    document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
-
-    // 初始化網頁
-    applyConfigUI();
-    updateMonthFilterOptions();
-    renderDashboard();
-
-    // 切換彈出視窗
-    function toggleModal(show) {
-        document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
-    }
-
-    // 儲存自訂選項
-    function saveSettings() {
-        const oInput = document.getElementById('setting-owners').value;
-        const cInput = document.getElementById('setting-categories').value;
-        
-        config.owners = oInput.split(',').map(s => s.trim()).filter(s => s);
-        config.categories = cInput.split(',').map(s => s.trim()).filter(s => s);
-        
-        applyConfigUI();
-        toggleModal(false);
-        renderDashboard();
-    }
-
-    // 將自訂選項套用到所有下拉選單與篩選欄位
-    function applyConfigUI() {
-        // 1. 套用新增區的大分類
-        const catSelect = document.getElementById('task-category');
-        catSelect.innerHTML = config.categories.map(c => `<option value="${c}">${c}</option>`).join('');
-        
-        // 2. 套用新增區的負責人
-        const ownerSelect = document.getElementById('task-owner');
-        ownerSelect.innerHTML = config.owners.map(o => `<option value="${o}">${o}</option>`).join('');
-        
-        // 3. 套用篩選區的成員
-        const filterOwner = document.getElementById('filter-owner');
-        const currentOwnerVal = filterOwner.value;
-        filterOwner.innerHTML = '<option value="全部">👥 全部成員</option>' + config.owners.map(o => `<option value="${o}">${o}</option>`).join('');
-        filterOwner.value = currentOwnerVal;
-        if (filterOwner.selectedIndex === -1) filterOwner.value = "全部";
-
-        // 💡 核心新增：4. 套用篩選區的分類
-        const filterCat = document.getElementById('filter-category');
-        const currentCatVal = filterCat.value;
-        filterCat.innerHTML = '<option value="全部">🏷️ 全部分類</option>' + config.categories.map(c => `<option value="${c}">${c}</option>`).join('');
-        filterCat.value = currentCatVal;
-        if (filterCat.selectedIndex === -1) filterCat.value = "全部";
-    }
-
-    // 動態搜集現有資料中的「年份-月份」
-    function updateMonthFilterOptions() {
-        const monthSelect = document.getElementById('filter-month');
-        const savedValue = monthSelect.value;
-        monthSelect.innerHTML = '<option value="全部">📅 全部月份</option>';
-        
-        const months = [];
-        tasks.forEach(t => {
-            if(t.date) {
-                const ym = t.date.substring(0, 7);
-                if(!months.includes(ym)) months.push(ym);
-            }
-        });
-        months.sort();
-        months.forEach(ym => {
-            const [year, month] = ym.split('-');
-            monthSelect.innerHTML += `<option value="${ym}">${year}年 ${month}月</option>`;
-        });
-        monthSelect.value = savedValue;
-        if(monthSelect.selectedIndex === -1) monthSelect.value = "全部";
-    }
-
-    // 新增項目函數
-    function addTask() {
-        const category = document.getElementById('task-category').value;
-        const name = document.getElementById('task-name').value.trim();
-        const owner = document.getElementById('task-owner').value;
-        const date = document.getElementById('task-date').value;
-        const priority = document.getElementById('task-priority').value;
-        const status = document.getElementById('task-status').value;
-
-        if (!name) { alert('請輸入事件名稱內容！'); return; }
-        if (!date) { alert('請選擇截止日期！'); return; }
-
-        const newTask = { id: Date.now(), date, category, name, owner, priority, status };
-        tasks.push(newTask);
-        
-        document.getElementById('task-name').value = '';
-        updateMonthFilterOptions();
-        renderDashboard();
-    }
-
-    // 💡 核心功能：表格內「文字直接修改」
-    function startEditName(id, currentText, cellElement) {
-        if (cellElement.querySelector('input, select')) return;
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.className = 'cell-inline-input';
-        input.value = currentText;
-        cellElement.innerHTML = '';
-        cellElement.appendChild(input);
-        input.focus();
-
-        function finishEdit() {
-            const newText = input.value.trim() || currentText;
-            tasks = tasks.map(t => { if (t.id === id) t.name = newText; return t; });
-            renderDashboard();
-        }
-        input.onblur = finishEdit;
-        input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
-    }
-
-    // 💡 核心功能：表格內「日期直接修改」
-    function startEditDate(id, currentDate, cellElement) {
-        if (cellElement.querySelector('input, select')) return;
-
-        const input = document.createElement('input');
-        input.type = 'date';
-        input.className = 'cell-inline-input';
-        input.value = currentDate;
-        cellElement.innerHTML = '';
-        cellElement.appendChild(input);
-        input.focus();
-
-        function finishEdit() {
-            const newDate = input.value || currentDate;
-            tasks = tasks.map(t => { if (t.id === id) t.date = newDate; return t; });
-            updateMonthFilterOptions();
-            renderDashboard();
-        }
-        input.onblur = finishEdit;
-        input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
-    }
-
-    // 💡 全新功能：表格內「大項目分類直接下拉修改」
-    function startEditCategory(id, currentCategory, cellElement) {
-        if (cellElement.querySelector('input, select')) return;
-
-        const select = document.createElement('select');
-        select.className = 'cell-inline-input';
-        
-        // 帶入當前使用者自訂的所有分類
-        config.categories.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c; opt.textContent = c;
-            if (c === currentCategory) opt.selected = true;
-            select.appendChild(opt);
-        });
-
-        cellElement.innerHTML = '';
-        cellElement.appendChild(select);
-        select.focus();
-
-        function finishEdit() {
-            const newCat = select.value;
-            tasks = tasks.map(t => { if (t.id === id) t.category = newCat; return t; });
-            renderDashboard();
-        }
-        select.onblur = finishEdit;
-        select.onchange = finishEdit;
-    }
-
-    // 💡 全新功能：表格內「負責對象直接下拉修改」
-    function startEditOwner(id, currentOwner, cellElement) {
-        if (cellElement.querySelector('input, select')) return;
-
-        const select = document.createElement('select');
-        select.className = 'cell-inline-input';
-        
-        // 帶入當前使用者自訂的所有成員
-        config.owners.forEach(o => {
-            const opt = document.createElement('option');
-            opt.value = o; opt.textContent = o;
-            if (o === currentOwner) opt.selected = true;
-            select.appendChild(opt);
-        });
-
-        cellElement.innerHTML = '';
-        cellElement.appendChild(select);
-        select.focus();
-
-        function finishEdit() {
-            const newOwner = select.value;
-            tasks = tasks.map(t => { if (t.id === id) t.owner = newOwner; return t; });
-            renderDashboard();
-        }
-        select.onblur = finishEdit;
-        select.onchange = finishEdit;
-    }
-
-    // 勾選狀態切換
-    function toggleTaskStatus(id, isChecked) {
-        tasks = tasks.map(t => {
-            if (t.id === id) t.status = isChecked ? '已完成' : '進行中';
-            return t;
-        });
-        renderDashboard();
-    }
-
-    // 刪除項目
-    function deleteTask(id) {
-        if(confirm('確定要刪除此項待辦嗎？')) {
-            tasks = tasks.filter(task => task.id !== id);
-            updateMonthFilterOptions();
-            renderDashboard();
-        }
-    }
-
-    // 核心網頁渲染（支援四重複合篩選）
-    function renderDashboard() {
-        const filterOwner = document.getElementById('filter-owner').value;
-        const filterMonth = document.getElementById('filter-month').value;
-        const filterCategory = document.getElementById('filter-category').value;
-        const filterStatus = document.getElementById('filter-status').value;
-        
-        const today = new Date();
-        today.setHours(0,0,0,0);
-
-        // 進行四重組合篩選
-        const filteredTasks = tasks.filter(t => {
-            const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
-            const matchMonth = (filterMonth === '全部' || t.date.startsWith(filterMonth));
-            const matchCategory = (filterCategory === '全部' || t.category === filterCategory);
-            
-            let matchStatus = true;
-            if (filterStatus === '未完成') matchStatus = (t.status !== '已完成');
-            else if (filterStatus === '已完成') matchStatus = (t.status === '已完成');
-            
-            return matchOwner && matchMonth && matchCategory && matchStatus;
-        });
-
-        // 1. 渲染第三區表格
-        const todoBody = document.getElementById('todo-body');
-        todoBody.innerHTML = '';
-        
-        if(filteredTasks.length === 0) {
-            todoBody.innerHTML = `<tr><td colspan="8" class="no-data">沒有符合篩選條件的項目</td></tr>`;
-        } else {
-            filteredTasks.sort((a,b) => new Date(a.date) - new Date(b.date));
-            filteredTasks.forEach(t => {
-                const isDone = t.status === '已完成';
-                const rowClass = isDone ? 'class="row-done"' : '';
-                const chkAttribute = isDone ? 'checked' : '';
-
-                // 設定未完成的格子擁有雙擊/點擊修改樣式
-                const nameStyle = isDone ? 'task-text' : 'task-text editable-cell';
-                const cellStyle = isDone ? '' : 'editable-cell';
-
-                todoBody.innerHTML += `
-                    <tr ${rowClass}>
-                        <td style="text-align:center;">
-                            <input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${chkAttribute}>
-                        </td>
-                        <td onclick="${isDone ? '' : `startEditDate(${t.id}, '${t.date}', this)`}">
-                            <span class="${cellStyle}"><strong>${t.date.replace(/-/g, '/')}</strong></span>
-                        </td>
-                        <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}">
-                            <span class="${cellStyle}">${t.category}</span>
-                        </td>
-                        <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}">
-                            <span class="${nameStyle}">${t.name}</span>
-                        </td>
-                        <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}">
-                            <span class="${cellStyle}">${t.owner}</span>
-                        </td>
-                        <td style="font-weight:bold;">${t.priority}</td>
-                        <td><span class="status-badge status-${t.status}">${t.status}</span></td>
-                        <td style="text-align:center;"><button class="btn-delete" onclick="deleteTask(${t.id})">🗑️</button></td>
-                    </tr>
-                `;
-            });
-        }
-
-        // 2. 渲染第0區智慧急件
-        const urgentContainer = document.getElementById('urgent-container');
-        urgentContainer.innerHTML = '';
-        
-        const urgentTasks = tasks.filter(t => {
-            const diffTime = new Date(t.date) - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays >= 0 && diffDays <= 7 && t.status !== '已完成';
-        });
-
-        if(urgentTasks.length === 0) {
-            urgentContainer.innerHTML = `<div class="no-data">☕ 太棒了！目前一週內沒有緊迫的未完成事件。</div>`;
-        } else {
-            urgentTasks.forEach(t => {
-                const diffDays = Math.ceil((new Date(t.date) - today) / (1000 * 60 * 60 * 24));
-                urgentContainer.innerHTML += `
-                    <div class="urgent-item">
-                        <div class="urgent-meta">⚠️ 剩餘 ${diffDays} 天 | 截止日: ${t.date.replace(/-/g, '/')}</div>
-                        <strong>【${t.category}】</strong> ${t.name} (${t.owner})
-                    </div>
-                `;
-            });
-        }
-
-        // 3. 渲染行事曆
-        renderCalendar(today);
-    }
-
-    function renderCalendar(today) {
-        const calendarBody = document.getElementById('calendar-body');
-        calendarBody.innerHTML = '';
-        let startGrid = new Date(today);
-        startGrid.setDate(today.getDate() - today.getDay());
-
-        let html = '<tr>';
-        for (let i = 0; i < 14; i++) {
-            if (i > 0 && i % 7 === 0) html += '</tr><tr>';
-            let currentGridDate = new Date(startGrid);
-            currentGridDate.setDate(startGrid.getDate() + i);
-            let dateStr = currentGridDate.toISOString().split('T')[0];
-
-            let isToday = dateStr === today.toISOString().split('T')[0] ? 'class="today"' : '';
-            let dayDisplay = currentGridDate.getDate();
-            if(dateStr === today.toISOString().split('T')[0]) dayDisplay += ' (今)';
-
-            let dayTasks = tasks.filter(t => t.date === dateStr);
-            let tagsHtml = '';
-            dayTasks.forEach(t => {
-                const doneClass = t.status === '已完成' ? 'done' : '';
-                tagsHtml += `<span class="calendar-tag ${doneClass}" title="${t.name}">${t.name}</span>`;
-            });
-
-            html += `<td ${isToday}><span class="calendar-day-num">${dayDisplay}</span>${tagsHtml}</td>`;
-        }
-        html += '</tr>';
-        calendarBody.innerHTML = html;
-    }
-
     // 📢 這裡已經幫您填入專屬的獨立 Web App 網址囉！
     const API_URL = "https://script.google.com/macros/s/AKfycbwWgfzw6d_Kk5osOblW1_azjz4sDelYnTj6ilTu9y1sxi6kVF_2MVOby9h7ndJQ47K80Q/exec";
 
-    // 真正的雲端回存同步函式
+    let config = { owners: ["妃", "通", "爸爸", "媽媽", "全家"], categories: ["💼 財務投資", "📊 公司稅務", "🏠 家用日常", "🍎 健康管理", "🎮 復古電玩"] };
+    let tasks = [];
+
+    document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
+
+    window.onload = function() {
+        loadDataFromGoogleSheets();
+    };
+
+    // 獨立專案讀取
+    function loadDataFromGoogleSheets() {
+        if(!API_URL || API_URL.includes("您的全新_Google")) {
+            applyConfigUI();
+            updateMonthFilterOptions();
+            renderDashboard();
+            return;
+        }
+        
+        document.getElementById('loading-mask').style.display = 'flex';
+        
+        fetch(API_URL)
+        .then(res => res.json())
+        .then(resData => {
+            if(resData) {
+                if(resData.config) {
+                    config = resData.config;
+                    document.getElementById('setting-owners').value = config.owners.join(',');
+                    document.getElementById('setting-categories').value = config.categories.join(',');
+                }
+                if(resData.tasks) {
+                    tasks = resData.tasks;
+                }
+            }
+            applyConfigUI();
+            updateMonthFilterOptions();
+            renderDashboard();
+        })
+        .catch(err => {
+            console.error("載入失敗：", err);
+            alert("載入雲端資料時發生錯誤。");
+            applyConfigUI();
+            updateMonthFilterOptions();
+            renderDashboard();
+        })
+        .finally(() => {
+            document.getElementById('loading-mask').style.display = 'none';
+        });
+    }
+
+    // 獨立專案回存
     function syncToGoogleSheets() {
         if(!API_URL || API_URL.includes("您的全新_Google")) {
             alert("請先填入您的全新 Google Apps Script Web App 網址！");
@@ -619,6 +323,267 @@
         .finally(() => {
             document.getElementById('loading-mask').style.display = 'none';
         });
+    }
+
+    function toggleModal(show) {
+        document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
+    }
+
+    function saveSettings() {
+        const oInput = document.getElementById('setting-owners').value;
+        const cInput = document.getElementById('setting-categories').value;
+        config.owners = oInput.split(',').map(s => s.trim()).filter(s => s);
+        config.categories = cInput.split(',').map(s => s.trim()).filter(s => s);
+        applyConfigUI();
+        toggleModal(false);
+        renderDashboard();
+    }
+
+    function applyConfigUI() {
+        document.getElementById('task-category').innerHTML = config.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        document.getElementById('task-owner').innerHTML = config.owners.map(o => `<option value="${o}">${o}</option>`).join('');
+        
+        const filterOwner = document.getElementById('filter-owner');
+        const currentOwnerVal = filterOwner.value;
+        filterOwner.innerHTML = '<option value="全部">👥 全部成員</option>' + config.owners.map(o => `<option value="${o}">${o}</option>`).join('');
+        filterOwner.value = currentOwnerVal;
+        if (filterOwner.selectedIndex === -1) filterOwner.value = "全部";
+
+        const filterCat = document.getElementById('filter-category');
+        const currentCatVal = filterCat.value;
+        filterCat.innerHTML = '<option value="全部">🏷️ 全部分類</option>' + config.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        filterCat.value = currentCatVal;
+        if (filterCat.selectedIndex === -1) filterCat.value = "全部";
+    }
+
+    function updateMonthFilterOptions() {
+        const monthSelect = document.getElementById('filter-month');
+        const savedValue = monthSelect.value;
+        monthSelect.innerHTML = '<option value="全部">📅 全部月份</option>';
+        const months = [];
+        tasks.forEach(t => {
+            if(t.date) {
+                const ym = t.date.substring(0, 7);
+                if(!months.includes(ym)) months.push(ym);
+            }
+        });
+        months.sort();
+        months.forEach(ym => {
+            const [year, month] = ym.split('-');
+            monthSelect.innerHTML += `<option value="${ym}">${year}年 ${month}月</option>`;
+        });
+        monthSelect.value = savedValue;
+        if(monthSelect.selectedIndex === -1) monthSelect.value = "全部";
+    }
+
+    function addTask() {
+        const category = document.getElementById('task-category').value;
+        const name = document.getElementById('task-name').value.trim();
+        const owner = document.getElementById('task-owner').value;
+        const date = document.getElementById('task-date').value;
+        const priority = document.getElementById('task-priority').value;
+        const status = document.getElementById('task-status').value;
+
+        if (!name) { alert('請輸入事件名稱內容！'); return; }
+        if (!date) { alert('請選擇截止日期！'); return; }
+
+        const newTask = { id: Date.now(), date, category, name, owner, priority, status };
+        tasks.push(newTask);
+        document.getElementById('task-name').value = '';
+        updateMonthFilterOptions();
+        renderDashboard();
+    }
+
+    function startEditName(id, currentText, cellElement) {
+        if (cellElement.querySelector('input, select')) return;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'cell-inline-input';
+        input.value = currentText;
+        cellElement.innerHTML = '';
+        cellElement.appendChild(input);
+        input.focus();
+        function finishEdit() {
+            const newText = input.value.trim() || currentText;
+            tasks = tasks.map(t => { if (t.id === id) t.name = newText; return t; });
+            renderDashboard();
+        }
+        input.onblur = finishEdit;
+        input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
+    }
+
+    function startEditDate(id, currentDate, cellElement) {
+        if (cellElement.querySelector('input, select')) return;
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.className = 'cell-inline-input';
+        input.value = currentDate;
+        cellElement.innerHTML = '';
+        cellElement.appendChild(input);
+        input.focus();
+        function finishEdit() {
+            const newDate = input.value || currentDate;
+            tasks = tasks.map(t => { if (t.id === id) t.date = newDate; return t; });
+            updateMonthFilterOptions();
+            renderDashboard();
+        }
+        input.onblur = finishEdit;
+        input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
+    }
+
+    function startEditCategory(id, currentCategory, cellElement) {
+        if (cellElement.querySelector('input, select')) return;
+        const select = document.createElement('select');
+        select.className = 'cell-inline-input';
+        config.categories.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.textContent = c;
+            if (c === currentCategory) opt.selected = true;
+            select.appendChild(opt);
+        });
+        cellElement.innerHTML = '';
+        cellElement.appendChild(select);
+        select.focus();
+        function finishEdit() {
+            const newCat = select.value;
+            tasks = tasks.map(t => { if (t.id === id) t.category = newCat; return t; });
+            renderDashboard();
+        }
+        select.onblur = finishEdit;
+        select.onchange = finishEdit;
+    }
+
+    function startEditOwner(id, currentOwner, cellElement) {
+        if (cellElement.querySelector('input, select')) return;
+        const select = document.createElement('select');
+        select.className = 'cell-inline-input';
+        config.owners.forEach(o => {
+            const opt = document.createElement('option');
+            opt.value = o; opt.textContent = o;
+            if (o === currentOwner) opt.selected = true;
+            select.appendChild(opt);
+        });
+        cellElement.innerHTML = '';
+        cellElement.appendChild(select);
+        select.focus();
+        function finishEdit() {
+            const newOwner = select.value;
+            tasks = tasks.map(t => { if (t.id === id) t.owner = newOwner; return t; });
+            renderDashboard();
+        }
+        select.onblur = finishEdit;
+        select.onchange = finishEdit;
+    }
+
+    function toggleTaskStatus(id, isChecked) {
+        tasks = tasks.map(t => {
+            if (t.id === id) t.status = isChecked ? '已完成' : '進行中';
+            return t;
+        });
+        renderDashboard();
+    }
+
+    function deleteTask(id) {
+        if(confirm('確定要刪除此項待辦嗎？')) {
+            tasks = tasks.filter(task => task.id !== id);
+            updateMonthFilterOptions();
+            renderDashboard();
+        }
+    }
+
+    function renderDashboard() {
+        const filterOwner = document.getElementById('filter-owner').value;
+        const filterMonth = document.getElementById('filter-month').value;
+        const filterCategory = document.getElementById('filter-category').value;
+        const filterStatus = document.getElementById('filter-status').value;
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        const filteredTasks = tasks.filter(t => {
+            const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
+            const matchMonth = (filterMonth === '全部' || t.date.startsWith(filterMonth));
+            const matchCategory = (filterCategory === '全部' || t.category === filterCategory);
+            let matchStatus = true;
+            if (filterStatus === '未完成') matchStatus = (t.status !== '已完成');
+            else if (filterStatus === '已完成') matchStatus = (t.status === '已完成');
+            return matchOwner && matchMonth && matchCategory && matchStatus;
+        });
+
+        const todoBody = document.getElementById('todo-body');
+        todoBody.innerHTML = '';
+        if(filteredTasks.length === 0) {
+            todoBody.innerHTML = `<tr><td colspan="8" class="no-data">沒有符合篩選條件的項目</td></tr>`;
+        } else {
+            filteredTasks.sort((a,b) => new Date(a.date) - new Date(b.date));
+            filteredTasks.forEach(t => {
+                const isDone = t.status === '已完成';
+                const rowClass = isDone ? 'class="row-done"' : '';
+                const chkAttribute = isDone ? 'checked' : '';
+                const nameStyle = isDone ? 'task-text' : 'task-text editable-cell';
+                const cellStyle = isDone ? '' : 'editable-cell';
+
+                todoBody.innerHTML += `
+                    <tr ${rowClass}>
+                        <td style="text-align:center;"><input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${chkAttribute}></td>
+                        <td onclick="${isDone ? '' : `startEditDate(${t.id}, '${t.date}', this)`}"><span class="${cellStyle}"><strong>${t.date.replace(/-/g, '/')}</strong></span></td>
+                        <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span class="${cellStyle}">${t.category}</span></td>
+                        <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}"><span class="${nameStyle}">${t.name}</span></td>
+                        <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}"><span class="${cellStyle}">${t.owner}</span></td>
+                        <td style="font-weight:bold;">${t.priority}</td>
+                        <td><span class="status-badge status-${t.status}">${t.status}</span></td>
+                        <td style="text-align:center;"><button class="btn-delete" onclick="deleteTask(${t.id})">🗑️</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        const urgentContainer = document.getElementById('urgent-container');
+        urgentContainer.innerHTML = '';
+        const urgentTasks = tasks.filter(t => {
+            const diffTime = new Date(t.date) - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays >= 0 && diffDays <= 7 && t.status !== '已完成';
+        });
+        if(urgentTasks.length === 0) {
+            urgentContainer.innerHTML = `<div class="no-data">☕ 太棒了！目前一週內沒有緊迫的未完成事件。</div>`;
+        } else {
+            urgentTasks.forEach(t => {
+                const diffDays = Math.ceil((new Date(t.date) - today) / (1000 * 60 * 60 * 24));
+                urgentContainer.innerHTML += `
+                    <div class="urgent-item">
+                        <div class="urgent-meta">⚠️ 剩餘 ${diffDays} 天 | 截止日: ${t.date.replace(/-/g, '/')}</div>
+                        <strong>【${t.category}】</strong> ${t.name} (${t.owner})
+                    </div>
+                `;
+            });
+        }
+        renderCalendar(today);
+    }
+
+    function renderCalendar(today) {
+        const calendarBody = document.getElementById('calendar-body');
+        calendarBody.innerHTML = '';
+        let startGrid = new Date(today);
+        startGrid.setDate(today.getDate() - today.getDay());
+        let html = '<tr>';
+        for (let i = 0; i < 14; i++) {
+            if (i > 0 && i % 7 === 0) html += '</tr><tr>';
+            let currentGridDate = new Date(startGrid);
+            currentGridDate.setDate(startGrid.getDate() + i);
+            let dateStr = currentGridDate.toISOString().split('T')[0];
+            let isToday = dateStr === today.toISOString().split('T')[0] ? 'class="today"' : '';
+            let dayDisplay = currentGridDate.getDate();
+            if(dateStr === today.toISOString().split('T')[0]) dayDisplay += ' (今)';
+            let dayTasks = tasks.filter(t => t.date === dateStr);
+            let tagsHtml = '';
+            dayTasks.forEach(t => {
+                const doneClass = t.status === '已完成' ? 'done' : '';
+                tagsHtml += `<span class="calendar-tag ${doneClass}" title="${t.name}">${t.name}</span>`;
+            });
+            html += `<td ${isToday}><span class="calendar-day-num">${dayDisplay}</span>${tagsHtml}</td>`;
+        }
+        html += '</tr>';
+        calendarBody.innerHTML = html;
     }
 </script>
 
