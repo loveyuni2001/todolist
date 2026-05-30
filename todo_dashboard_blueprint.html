@@ -712,67 +712,65 @@
     }
 
     function renderDashboard() {
-        renderUrgentTasks();
-        renderCalendar();
+    renderUrgentTasks();
+    renderCalendar();
 
-        const filterOwner = document.getElementById('filter-owner').value;
-        const filterMonth = document.getElementById('filter-month').value;
-        const filterCategory = document.getElementById('filter-category').value;
-        const filterStatus = document.getElementById('filter-status').value;
+    const filterOwner = document.getElementById('filter-owner').value;
+    const filterMonth = document.getElementById('filter-month').value;
+    const filterCategory = document.getElementById('filter-category').value;
+    const filterStatus = document.getElementById('filter-status').value;
 
-        const filteredTasks = tasks.filter(t => {
-            if(!t) return false;
-            const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
-            const tYm = cleanDateStr(t.date).substring(0, 7).replace(/\//g, '-');
-            const fYm = filterMonth.replace(/\//g, '-');
-            const matchMonth = (filterMonth === '全部' || tYm === fYm);
-            const matchCategory = (filterCategory === '全部' || t.category === filterCategory);
-            let matchStatus = true;
-            if (filterStatus === '未完成') matchStatus = (t.status !== '已完成');
-            else if (filterStatus === '已完成') matchStatus = (t.status === '已完成');
-            return matchOwner && matchMonth && matchCategory && matchStatus;
-        });
+    const filteredTasks = tasks.filter(t => {
+        if(!t) return false;
+        const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
+        const tYm = cleanDateStr(t.date).substring(0, 7).replace(/\//g, '-');
+        const fYm = filterMonth.replace(/\//g, '-');
+        const matchMonth = (filterMonth === '全部' || tYm === fYm);
+        const matchCategory = (filterCategory === '全部' || t.category === filterCategory);
+        let matchStatus = true;
+        if (filterStatus === '未完成') matchStatus = (t.status !== '已完成');
+        else if (filterStatus === '已完成') matchStatus = (t.status === '已完成');
+        return matchOwner && matchMonth && matchCategory && matchStatus;
+    });
 
-        const todoBody = document.getElementById('todo-body');
-        todoBody.innerHTML = '';
-        if(filteredTasks.length === 0) {
-            todoBody.innerHTML = `<tr><td colspan="9" class="no-data">沒有符合篩選條件的項目</td></tr>`;
-        } else {
-            filteredTasks.sort((a,b) => cleanDateStr(a.date).localeCompare(cleanDateStr(b.date)));
-            filteredTasks.forEach(t => {
-                const isDone = t.status === '已完成';
-                const rowClass = isDone ? 'class="row-done"' : '';
-                const chkAttribute = isDone ? 'checked' : '';
-                const nameStyle = isDone ? 'task-text' : 'task-text editable-cell';
-                const cellStyle = isDone ? '' : 'editable-cell';
-                const cleanDate = cleanDateStr(t.date);
-                
-                let attachHtml = "";
-                const linkUrl = t.attachment || "";
-                if(linkUrl) {
-                    attachHtml = `<a href="${linkUrl}" target="_blank" class="btn-attachment" onclick="event.stopPropagation();">🔗 查看附件</a>`;
-                } else {
-                    attachHtml = `<span class="empty-link">(點此補貼網址)</span>`;
+    const todoBody = document.getElementById('todo-body');
+    todoBody.innerHTML = '';
+    
+    if(filteredTasks.length === 0) {
+        todoBody.innerHTML = `<tr><td colspan="9" class="no-data">沒有符合篩選條件的項目</td></tr>`;
+    } else {
+        filteredTasks.sort((a,b) => cleanDateStr(a.date).localeCompare(cleanDateStr(b.date))).forEach(t => {
+            const isDone = t.status === '已完成';
+            const rowClass = isDone ? 'class="row-done"' : '';
+            const chkAttribute = isDone ? 'checked' : '';
+            const cleanDate = cleanDateStr(t.date);
+            
+            // 建立行
+            const tr = document.createElement('tr');
+            if(isDone) tr.className = 'row-done';
+            
+            // 這裡新增 onclick 觸發展開，但排除 checkbox 和按鈕區塊
+            tr.onclick = (e) => {
+                if(e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'A') {
+                    toggleDetail(t.id, tr);
                 }
+            };
 
-                todoBody.innerHTML += `
-                    <tr ${rowClass}>
-                        <td style="text-align:center;"><input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${chkAttribute}></td>
-                        <td class="nowrap-cell" onclick="${isDone ? '' : `startEditDate(${t.id}, '${cleanDate}', this)`}"><span class="${cellStyle}"><strong>${cleanDate}</strong></span></td>
-                        <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span class="${cellStyle}">${t.category}</span></td>
-                        <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}"><span class="${nameStyle}">${t.name}</span></td>
-                        
-                        <td onclick="${isDone ? '' : `startEditAttachment(${t.id}, '${linkUrl.replace(/'/g, "\\'")}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${attachHtml}</span></td>
-                        
-                        <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}"><span class="${cellStyle}">${t.owner}</span></td>
-                        <td class="nowrap-cell" style="font-weight:bold;">${t.priority}</td>
-                        <td class="nowrap-cell"><span class="status-badge status-${t.status}">${t.status}</span></td>
-                        <td style="text-align:center;"><button class="btn-delete" onclick="deleteTask(${t.id})">🗑️</button></td>
-                    </tr>
-                `;
-            });
-        }
+            tr.innerHTML = `
+                <td style="text-align:center;"><input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${chkAttribute}></td>
+                <td class="nowrap-cell" onclick="${isDone ? '' : `startEditDate(${t.id}, '${cleanDate}', this)`}"><span class="${isDone ? '' : 'editable-cell'}"><strong>${cleanDate}</strong></span></td>
+                <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${t.category}</span></td>
+                <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}"><span class="${isDone ? 'task-text' : 'task-text editable-cell'}">${t.name}</span></td>
+                <td onclick="${isDone ? '' : `startEditAttachment(${t.id}, '${(t.attachment || "").replace(/'/g, "\\'")}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${t.attachment ? `<a href="${t.attachment}" target="_blank" class="btn-attachment" onclick="event.stopPropagation()">🔗 查看附件</a>` : '<span class="empty-link">(點此補貼網址)</span>'}</span></td>
+                <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${t.owner}</span></td>
+                <td class="nowrap-cell" style="font-weight:bold;">${t.priority}</td>
+                <td class="nowrap-cell"><span class="status-badge status-${t.status}">${t.status}</span></td>
+                <td style="text-align:center;"><button class="btn-delete" onclick="deleteTask(${t.id})">🗑️</button></td>
+            `;
+            todoBody.appendChild(tr);
+        });
     }
+}
 </script>
 </body>
 </html>
