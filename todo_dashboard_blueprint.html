@@ -386,20 +386,20 @@
 
     /* 🛡️ 終極防護：使用台灣在地時區格式化日期，完全斷絕 ISO 的格林威治扣時干擾 */
     function cleanDateStr(rawDate) {
-        if (!rawDate) return "";
-        try {
-            let dStr = rawDate.toString().trim();
-            // 處理包含時區的完整字串
-            let d = new Date(dStr);
-            if (!isNaN(d.getTime())) {
-                let formatter = new Intl.DateTimeFormat('zh-TW', {
-                    timeZone: 'Asia/Taipei',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit'
-                });
-                return formatter.format(d).replace(/-/g, '/'); // 產出 YYYY/MM/DD
-            }
+    if (!rawDate) return "";
+    try {
+        let dStr = rawDate.toString().trim();
+        // 修正：先嘗試直接處理 YYYY-MM-DD 或 YYYY/MM/DD 字串
+        let d = new Date(dStr.replace(/-/g, '/')); 
+        if (!isNaN(d.getTime())) {
+            let y = d.getFullYear();
+            let m = String(d.getMonth() + 1).padStart(2, '0');
+            let d_day = String(d.getDate()).padStart(2, '0');
+            return `${y}/${m}/${d_day}`; // 強制回傳 YYYY/MM/DD
+        }
+    } catch(e) { return ""; }
+    return "";
+}
             
             // 備用純文字文字清理
             if (dStr.includes("T")) dStr = dStr.split("T")[0];
@@ -608,8 +608,14 @@
                 let tr = document.createElement('tr');
                 for (let col = 0; col < 7; col++) {
                     let td = document.createElement('td');
-                    let dateStr = `${currentPointer.getFullYear()}/${String(currentPointer.getMonth()+1).padStart(2,'0')}/${String(currentPointer.getDate()).padStart(2,'0')}`;
-                    
+                    // 在 renderCalendar 迴圈裡面，修改這一行：
+let dateStr = `${currentPointer.getFullYear()}/${String(currentPointer.getMonth()+1).padStart(2,'0')}/${String(currentPointer.getDate()).padStart(2,'0')}`;
+
+// 因為上面這行產生的格式已經是 YYYY/MM/DD，
+// 且 cleanDateStr 也改成回傳 YYYY/MM/DD，
+// 當你執行下方這行過濾時：
+const dayTasks = tasks.filter(t => t && cleanDateStr(t.date) === dateStr);
+// 它們就會精準配對了！
                     if (currentPointer.toDateString() === today.toDateString()) {
                         td.className = 'today';
                     }
