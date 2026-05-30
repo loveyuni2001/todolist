@@ -41,18 +41,16 @@
         }
         .panel-title { font-size: 16px; font-weight: bold; margin-top: 5px; margin-bottom: 15px; border-bottom: 1px dashed #d1d5db; padding-bottom: 8px; }
         
-        /* 01區 電腦版經典 3 欄位排版 */
+        /* 01區 網格結構維持經典 3 欄位 */
         .form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 15px; }
         .form-group { display: flex; flex-direction: column; }
         label { font-size: 13px; font-weight: bold; color: #374151; display: block; margin-bottom: 5px; }
         
-        /* 調整回原本精緻的欄位高度 */
         input[type="text"], input[type="date"], select {
             width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; background-color: #f8fafc; height: 38px;
         }
         input:focus, select:focus { border-color: #111827; outline: none; background-color: #ffffff; }
         
-        /* 🛠️ 特別修正：解決手機版 date 欄位右側凸出、無法對齊的問題 */
         input[type="date"] {
             max-width: 100% !important;
             appearance: none;
@@ -69,17 +67,15 @@
         .urgent-meta { font-size: 11px; color: #e11d48; font-weight: bold; margin-bottom: 2px; }
         .no-data { color: #9ca3af; text-align: center; padding: 20px; font-size: 14px; }
         
-        /* 📅 日曆視圖（回歸原本好看的經典灰綠色調） */
+        /* 📅 日曆視圖 */
         .calendar-table { width: 100%; border-collapse: collapse; }
         .calendar-table th { background-color: #f8fafc; color: #475569; font-size: 13px; font-weight: bold; padding: 8px 6px; border: 1px solid #e2e8f0; }
         .calendar-table td { border: 1px solid #e2e8f0; width: 14.28%; height: 75px; vertical-align: top; padding: 6px; font-size: 13px; background-color: #ffffff; }
         
-        /* 今天 (今) 清爽綠色邊框高亮 */
         .calendar-table td.today { background-color: #f0fdf4; border: 2px solid #16a34a; }
         .calendar-table td.today .calendar-day-num { color: #16a34a; }
         .calendar-day-num { font-size: 13px; font-weight: bold; color: #64748b; margin-bottom: 4px; display: block; }
         
-        /* ⚡ 全支付橘黃色底 + 黑色粗字 */
         .calendar-tag { 
             background-color: #ffcc00; color: #000000; font-size: 11px; padding: 3px 5px; 
             border-radius: 4px; display: block; margin-bottom: 3px; overflow: hidden; 
@@ -94,9 +90,9 @@
         .filter-controls { display: flex; gap: 8px; flex-wrap: wrap; }
         .inline-select { width: auto; display: inline-block; padding: 6px 12px; font-size: 13px; border-radius: 6px; border: 1px solid #cbd5e1; }
         
-        /* 項目列表防擠壓外殼 */
+        /* 項目列表外殼 */
         .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .todo-table { width: 100%; border-collapse: collapse; min-width: 750px; }
+        .todo-table { width: 100%; border-collapse: collapse; min-width: 800px; }
         .todo-table th { background-color: #1e293b; color: #ffffff; padding: 10px; text-align: left; font-size: 14px; white-space: nowrap; }
         .todo-table td { padding: 10px; font-size: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .todo-table tr:hover td { background-color: #f8fafc; }
@@ -114,12 +110,21 @@
         .status-進行中 { background-color: #dbeafe; color: #2563eb; }
         .status-已完成 { background-color: #dcfce7; color: #16a34a; }
         
+        /* 📎 附件精緻按鈕與元件樣式 */
+        .btn-attachment {
+            display: inline-flex; align-items: center; background-color: #eff6ff; color: #2563eb;
+            border: 1px solid #bfdbfe; padding: 2px 8px; border-radius: 4px; font-size: 12px;
+            font-weight: bold; text-decoration: none; margin-left: 6px; transition: 0.2s;
+        }
+        .btn-attachment:hover { background-color: #dbeafe; }
+        .empty-link { color: #94a3b8; font-style: italic; font-size: 12px; }
+
         .btn-delete { background: none; border: none; cursor: pointer; color: #ef4444; font-size: 16px; }
         .chk-box { width: 16px; height: 16px; cursor: pointer; }
         
         .loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); z-index:9999; justify-content:center; align-items:center; font-size:18px; font-weight:bold; color:#111827; }
 
-        /* 📱 手機版專屬優化 */
+        /* 📱 手機版專屬完美兩兩排版優化 */
         @media (max-width: 768px) {
             body { padding: 10px; }
             .main-grid { grid-template-columns: 1fr; gap: 15px; }
@@ -127,17 +132,20 @@
             .header-buttons { width: 100%; justify-content: center; }
             .btn-sync, .btn-settings { flex: 1; text-align: center; font-size: 13px; padding: 8px 12px; }
             
-            /* 恢復原本最讚的「兩兩並排」網格 */
+            /* 完美兩兩並排 */
             .form-row { 
                 grid-template-columns: 1fr 1fr !important; 
                 gap: 12px; 
             }
-            /* 事件名稱單獨佔滿一行，維持原有結構 */
+            /* 事件名稱單獨佔滿一行 */
             .form-row:nth-child(1) .form-group:nth-child(2) { 
                 grid-column: span 2; 
             }
+            /* 讓新增的第三排附件網址也能在手機上優雅延展 */
+            .form-row:nth-child(3) .form-group:nth-child(1) {
+                grid-column: span 2;
+            }
             
-            /* 針對手機版一邊一底對齊的極致微調 */
             input[type="text"], input[type="date"], select {
                 width: 100% !important;
                 max-width: 100% !important;
@@ -216,6 +224,14 @@
                     </select>
                 </div>
             </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>📄 附件網址 / 雲端硬碟詳細連結 (選填)</label>
+                    <input type="text" id="task-attachment" placeholder="可貼上 Google Drive 照片、說明網址或空白...">
+                </div>
+            </div>
+
             <button class="btn-submit" onclick="addTask()">＋ 確認新增至任務暫存表</button>
         </div>
     </div>
@@ -260,14 +276,15 @@
             <table class="todo-table">
                 <thead>
                     <tr>
-                        <th style="width: 5%; text-align: center;">紀錄</th>
-                        <th style="width: 14%;">截止日期</th>
-                        <th style="width: 16%;">大項目分類</th>
-                        <th style="width: 32%;">待辦事件內容 (點擊可改)</th>
-                        <th style="width: 10%;">負責</th>
-                        <th style="width: 8%;">優先權</th>
-                        <th style="width: 10%;">狀態</th>
-                        <th style="width: 5%; text-align: center;">操作</th>
+                        <th style="width: 4%; text-align: center;">紀錄</th>
+                        <th style="width: 12%;">截止日期</th>
+                        <th style="width: 15%;">大項目分類</th>
+                        <th style="width: 28%;">待辦事件內容 (點擊可改)</th>
+                        <th style="width: 16%;">📄 附件與詳細說明連結 (點擊可改)</th>
+                        <th style="width: 8%;">負責</th>
+                        <th style="width: 7%;">優先權</th>
+                        <th style="width: 7%;">狀態</th>
+                        <th style="width: 3%; text-align: center;">操作</th>
                     </tr>
                 </thead>
                 <tbody id="todo-body"></tbody>
@@ -329,7 +346,11 @@
                     document.getElementById('setting-categories').value = config.categories.join(',');
                 }
                 if(resData.tasks) {
-                    tasks = resData.tasks;
+                    // 確保舊資料也有 attachment 屬性，避免錯誤
+                    tasks = resData.tasks.map(t => {
+                        if (t.attachment === undefined) t.attachment = "";
+                        return t;
+                    });
                 }
             }
             applyConfigUI();
@@ -368,7 +389,7 @@
         .then(res => res.text())
         .then(text => {
             if(text === "Success") {
-                alert("🎉 所有待辦事項與自訂選單設定已成功同步至雲端試算表！");
+                alert("🎉 所有待辦事項與自訂選單設定（包含附件連結欄位）已成功同步至雲端試算表！");
             } else {
                 alert("回傳回應：" + text);
             }
@@ -440,13 +461,15 @@
         const date = document.getElementById('task-date').value;
         const priority = document.getElementById('task-priority').value;
         const status = document.getElementById('task-status').value;
+        const attachment = document.getElementById('task-attachment').value.trim(); // 取得附件
 
         if (!name) { alert('請輸入事件名稱內容！'); return; }
         if (!date) { alert('請選擇截止日期！'); return; }
 
-        const newTask = { id: Date.now(), date, category, name, owner, priority, status };
+        const newTask = { id: Date.now(), date, category, name, owner, priority, status, attachment };
         tasks.push(newTask);
         document.getElementById('task-name').value = '';
+        document.getElementById('task-attachment').value = ''; // 清空附件
         updateMonthFilterOptions();
         renderDashboard();
     }
@@ -469,7 +492,25 @@
         input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
     }
 
-    // 項目清單點擊修改日期 (補上修正格式)
+    // ⚡ 新增：行內修改附件連結的邏輯
+    function startEditAttachment(id, currentLink, cellElement) {
+        if (cellElement.querySelector('input, select')) return;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'cell-inline-input';
+        input.value = currentLink;
+        cellElement.innerHTML = '';
+        cellElement.appendChild(input);
+        input.focus();
+        function finishEdit() {
+            const newLink = input.value.trim();
+            tasks = tasks.map(t => { if (t.id === id) t.attachment = newLink; return t; });
+            renderDashboard();
+        }
+        input.onblur = finishEdit;
+        input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
+    }
+
     function startEditDate(id, currentDate, cellElement) {
         if (cellElement.querySelector('input, select')) return;
         const input = document.createElement('input');
@@ -570,7 +611,7 @@
         const todoBody = document.getElementById('todo-body');
         todoBody.innerHTML = '';
         if(filteredTasks.length === 0) {
-            todoBody.innerHTML = `<tr><td colspan="8" class="no-data">沒有符合篩選條件的項目</td></tr>`;
+            todoBody.innerHTML = `<tr><td colspan="9" class="no-data">沒有符合篩選條件的項目</td></tr>`;
         } else {
             filteredTasks.sort((a,b) => new Date(a.date) - new Date(b.date));
             filteredTasks.forEach(t => {
@@ -579,6 +620,15 @@
                 const chkAttribute = isDone ? 'checked' : '';
                 const nameStyle = isDone ? 'task-text' : 'task-text editable-cell';
                 const cellStyle = isDone ? '' : 'editable-cell';
+                
+                // 處理附件顯示邏輯：有網址就秀按鈕，點擊可開啟新視窗，同時不阻礙點空白處進行修改
+                let attachHtml = "";
+                const linkUrl = t.attachment || "";
+                if(linkUrl) {
+                    attachHtml = `<a href="${linkUrl}" target="_blank" class="btn-attachment" onclick="event.stopPropagation();">🔗 查看附件</a>`;
+                } else {
+                    attachHtml = `<span class="empty-link">(點此補貼網址)</span>`;
+                }
 
                 todoBody.innerHTML += `
                     <tr ${rowClass}>
@@ -586,6 +636,9 @@
                         <td onclick="${isDone ? '' : `startEditDate(${t.id}, '${t.date}', this)`}"><span class="${cellStyle}"><strong>${t.date.replace(/-/g, '/')}</strong></span></td>
                         <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span class="${cellStyle}">${t.category}</span></td>
                         <td onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this)`}"><span class="${nameStyle}">${t.name}</span></td>
+                        
+                        <td onclick="${isDone ? '' : `startEditAttachment(${t.id}, '${linkUrl.replace(/'/g, "\\'")}', this)`}"><span class="${isDone ? '' : 'editable-cell'}">${attachHtml}</span></td>
+                        
                         <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}"><span class="${cellStyle}">${t.owner}</span></td>
                         <td style="font-weight:bold;">${t.priority}</td>
                         <td><span class="status-badge status-${t.status}">${t.status}</span></td>
@@ -607,10 +660,17 @@
         } else {
             urgentTasks.forEach(t => {
                 const diffDays = Math.ceil((new Date(t.date) - today) / (1000 * 60 * 60 * 24));
+                
+                // 智慧急件區也順便支援附件一鍵直達
+                let urgentAttachHtml = "";
+                if(t.attachment) {
+                    urgentAttachHtml = ` <a href="${t.attachment}" target="_blank" style="text-decoration:none; font-size:12px; color:#2563eb; font-weight:bold;">[📎查看資料]</a>`;
+                }
+
                 urgentContainer.innerHTML += `
                     <div class="urgent-item">
                         <div class="urgent-meta">⚠️ 剩餘 ${diffDays} 天 | 截止日: ${t.date.replace(/-/g, '/')}</div>
-                        <strong>【${t.category}】</strong> ${t.name} (${t.owner})
+                        <strong>【${t.category}】</strong> ${t.name} (${t.owner})${urgentAttachHtml}
                     </div>
                 `;
             });
