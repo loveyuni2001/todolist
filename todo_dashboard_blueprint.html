@@ -384,20 +384,7 @@
         reader.readAsDataURL(file);
     }
 
-  /* 🛡️ 終極防護：統一日期格式為 YYYY/MM/DD */
-function cleanDateStr(rawDate) {
-    if (!rawDate) return "";
-    try {
-        let dStr = rawDate.toString().trim();
-        // 如果包含 T (ISO格式)，只取前半段
-        if (dStr.includes("T")) dStr = dStr.split("T")[0];
-        
-        let d = new Date(dStr.replace(/-/g, '/')); 
-        if (!isNaN(d.getTime())) {
-            let y = d.getFullYear();
-            let m = String(d.getMonth() + 1).padStart(2, '0');
-            let d_day = String(d.getDate()).padStart(2, '0');
-            return `${y}/${m}/${d_day}`;
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -1176,6 +1163,26 @@ function cleanDateStr(rawDate) {
             renderDashboard();
         });
     }
+    /* 🛡️ 終極防護：統一日期格式為 YYYY/MM/DD（完整修正版） */
+function cleanDateStr(rawDate) {
+    if (!rawDate) return "";
+    try {
+        let dStr = rawDate.toString().trim();
+        // 如果包含 T (ISO格式)，只取前半段
+        if (dStr.includes("T")) dStr = dStr.split("T")[0];
+        
+        let d = new Date(dStr.replace(/-/g, '/')); 
+        if (!isNaN(d.getTime())) {
+            let y = d.getFullYear();
+            let m = String(d.getMonth() + 1).padStart(2, '0');
+            let d_day = String(d.getDate()).padStart(2, '0');
+            return `${y}/${m}/${d_day}`;
+        }
+    } catch (e) {
+        console.error("日期解析出錯:", e);
+    }
+    return ""; // 如果解析失敗，回傳空字串
+}
 </script>
 </body>
 </html>
