@@ -583,8 +583,42 @@
         calendarBody.innerHTML = html;
     }
 
+    // 📢 【關鍵核心】請將下方的網址換成您全新部署的 Google Apps Script Web App 網址
+    const API_URL = "您的全新_Google_Apps_Script網址";
+
+    // 真正的雲端回存同步函式
     function syncToGoogleSheets() {
-        alert('前端四重大篩選與全欄位直接修正已就緒！\n接下來隨時可以幫您串接 Google 試算表。');
+        if(!API_URL || API_URL.includes("您的全新_Google")) {
+            alert("https://script.google.com/macros/s/AKfycbwWgfzw6d_Kk5osOblW1_azjz4sDelYnTj6ilTu9y1sxi6kVF_2MVOby9h7ndJQ47K80Q/exec");
+            return;
+        }
+        
+        document.getElementById('loading-mask').style.display = 'flex';
+        
+        const payload = {
+            tasks: tasks,
+            config: config
+        };
+        
+        fetch(API_URL, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.text())
+        .then(text => {
+            if(text === "Success") {
+                alert("🎉 所有待辦事項與自訂選單設定已成功同步至雲端試算表！");
+            } else {
+                alert("回傳回應：" + text);
+            }
+        })
+        .catch(err => {
+            console.error("儲存失敗：", err);
+            alert("同步至雲端時發生錯誤！");
+        })
+        .finally(() => {
+            document.getElementById('loading-mask').style.display = 'none';
+        });
     }
 </script>
 
