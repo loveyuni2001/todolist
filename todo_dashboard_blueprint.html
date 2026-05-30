@@ -46,25 +46,39 @@
         .urgent-item { background-color: #fff1f2; border-left: 4px solid #f43f5e; padding: 10px; border-radius: 4px; margin-bottom: 10px; font-size: 13px; }
         .urgent-meta { font-size: 11px; color: #e11d48; font-weight: bold; margin-bottom: 2px; }
         .no-data { color: #9ca3af; text-align: center; padding: 20px; font-size: 14px; }
+        
+        /* 日曆樣式 */
         .calendar-table { width: 100%; border-collapse: collapse; }
         .calendar-table th { background-color: #f1f5f9; color: #475569; font-size: 12px; padding: 6px; border: 1px solid #e2e8f0; }
-        .calendar-table td { border: 1px solid #e2e8f0; width: 14.28%; height: 60px; vertical-align: top; padding: 4px; font-size: 11px; background-color: #ffffff; }
+        .calendar-table td { border: 1px solid #e2e8f0; width: 14.28%; height: 65px; vertical-align: top; padding: 4px; font-size: 11px; background-color: #ffffff; }
         .calendar-table td.today { background-color: #f0fdf4; border: 2px solid #16a34a; }
         .calendar-day-num { font-weight: bold; color: #64748b; margin-bottom: 2px; display: block; }
         .calendar-tag { background-color: #3b82f6; color: white; font-size: 10px; padding: 1px 4px; border-radius: 3px; display: block; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .calendar-tag.done { background-color: #cbd5e1; color: #94a3b8; text-decoration: line-through; }
+        
+        /* 列表樣式 */
         .data-panel { background-color: #ffffff; border: 2px solid #111827; border-radius: 12px; padding: 20px; }
         .filter-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; flex-wrap: wrap; gap: 10px; }
         .filter-left { font-size: 16px; font-weight: bold; }
-        .inline-select { width: auto; display: inline-block; padding: 4px 10px; font-size: 13px; margin-left: 5px; }
+        .filter-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+        .inline-select { width: auto; display: inline-block; padding: 6px 12px; font-size: 13px; border-radius: 6px; border: 1px solid #cbd5e1; }
+        
         .todo-table { width: 100%; border-collapse: collapse; }
         .todo-table th { background-color: #1e293b; color: #ffffff; padding: 10px; text-align: left; font-size: 14px; }
-        .todo-table td { padding: 10px; font-size: 14px; border-bottom: 1px solid #e2e8f0; }
+        .todo-table td { padding: 10px; font-size: 14px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
         .todo-table tr:hover td { background-color: #f8fafc; }
+        
+        /* 完工狀態切換的視覺效果 */
+        .row-done { color: #94a3b8; background-color: #f8fafc; }
+        .row-done .task-text { text-decoration: line-through; }
+        
         .status-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold; }
         .status-未開始 { background-color: #fef3c7; color: #d97706; }
         .status-進行中 { background-color: #dbeafe; color: #2563eb; }
         .status-已完成 { background-color: #dcfce7; color: #16a34a; }
+        
         .btn-delete { background: none; border: none; cursor: pointer; color: #ef4444; font-size: 16px; }
+        .chk-box { width: 16px; height: 16px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -83,7 +97,7 @@
     <div class="main-grid">
         <div class="panel-card">
             <span class="panel-badge">00 智慧急件解析</span>
-            <h2 class="panel-title">🔔 近期一週截止內提醒 (7天內急件)</h2>
+            <h2 class="panel-title">🔔 近期一週截止內提醒 (7天內未完成急件)</h2>
             <div id="urgent-container"></div>
         </div>
 
@@ -157,12 +171,23 @@
 
     <div class="data-panel">
         <div class="filter-bar">
-            <div class="filter-left">📊 03 目前所有項目清單 (本地暫存)</div>
-            <div>
+            <div class="filter-left">📊 03 目前所有項目清單</div>
+            <div class="filter-controls">
                 <select id="filter-owner" class="inline-select" onchange="renderDashboard()">
-                    <option value="全部">全部成員</option>
+                    <option value="全部">👥 全部成員</option>
                     <option value="妃">妃</option>
                     <option value="通">通</option>
+                    <option value="全家">全家</option>
+                </select>
+                
+                <select id="filter-month" class="inline-select" onchange="renderDashboard()">
+                    <option value="全部">📅 全部月份</option>
+                </select>
+
+                <select id="filter-status" class="inline-select" onchange="renderDashboard()">
+                    <option value="全部">🔍 全部狀態</option>
+                    <option value="未完成">⏳ 未完成 (進行中/未開始)</option>
+                    <option value="已完成">✅ 已完成</option>
                 </select>
             </div>
         </div>
@@ -170,13 +195,14 @@
         <table class="todo-table">
             <thead>
                 <tr>
-                    <th>截止日期</th>
-                    <th>大項目分類</th>
-                    <th>待辦事件內容</th>
-                    <th>負責對象</th>
-                    <th>優先權</th>
-                    <th>狀態</th>
-                    <th style="text-align: center;">操作</th>
+                    <th style="width: 5%; text-align: center;">紀錄</th>
+                    <th style="width: 12%;">截止日期</th>
+                    <th style="width: 15%;">大項目分類</th>
+                    <th style="width: 38%;">待辦事件內容</th>
+                    <th style="width: 8%;">負責</th>
+                    <th style="width: 8%;">優先權</th>
+                    <th style="width: 10%;">狀態</th>
+                    <th style="width: 5%; text-align: center;">操作</th>
                 </tr>
             </thead>
             <tbody id="todo-body"></tbody>
@@ -185,18 +211,52 @@
 </div>
 
 <script>
-    // 預設幾筆初始模擬資料
+    // 預設核心資料庫項目
     let tasks = [
-        { id: 1, date: "2026-06-01", category: "📊 公司稅務", name: "五月營業稅申報資料與憑證最終核對", owner: "妃", priority: "🔴 高", status: "進行中" },
-        { id: 2, date: "2026-06-04", category: "🏠 家用日常", name: "幫媽媽訂購端午節素食粽子禮盒", owner: "妃", priority: "🟡 中", status: "未開始" },
-        { id: 3, date: "2026-06-05", category: "💼 財務投資", name: "美股 Firstrade 帳戶定期定額 VOO / QQQ 資金匯入確認", owner: "妃", priority: "🟡 中", status: "未開始" }
+        { id: 1, date: "2026-05-30", category: "🍎 健康管理", name: "製作週末藍莓高蛋白奶昔與優格材料補貨", owner: "妃", priority: "🟢 低", status: "已完成" },
+        { id: 2, date: "2026-06-01", category: "📊 公司稅務", name: "五月營業稅申報資料與憑證最終核對", owner: "妃", priority: "🔴 高", status: "進行中" },
+        { id: 3, date: "2026-06-04", category: "🏠 家用日常", name: "幫媽媽訂購端午節素食粽子禮盒", owner: "妃", priority: "🟡 中", status: "未開始" },
+        { id: 4, date: "2026-06-05", category: "💼 財務投資", name: "美股 Firstrade 帳戶定期定額 VOO / QQQ 資金匯入確認", owner: "妃", priority: "🟡 中", status: "未開始" },
+        { id: 5, date: "2026-06-15", category: "🎮 復古電玩", name: "整理收藏 GBA 與 N64 遊戲卡帶估價上架", owner: "通", priority: "🟢 低", status: "進行中" }
     ];
 
-    // 設定預設日期為今天
+    // 設定新增日期的預設值為今天
     document.getElementById('task-date').value = new Date().toISOString().split('T')[0];
 
-    // 初始化渲染
+    // 第一次執行
+    updateMonthFilterOptions();
     renderDashboard();
+
+    // 動態搜集現有資料中的「年份-月份」，填充到下拉選單中
+    function updateMonthFilterOptions() {
+        const monthSelect = document.getElementById('filter-month');
+        const savedValue = monthSelect.value; // 記住當前選取項
+        
+        // 只保留第一個「全部月份」
+        monthSelect.innerHTML = '<option value="全部">📅 全部月份</option>';
+        
+        // 抓出所有不重複的 YYYY-MM
+        const months = [];
+        tasks.forEach(t => {
+            if(t.date) {
+                const ym = t.date.substring(0, 7); // 取得 "2026-06"
+                if(!months.includes(ym)) months.push(ym);
+            }
+        });
+        
+        // 由小到大排序
+        months.sort();
+        
+        // 塞入下拉選單
+        months.forEach(ym => {
+            const [year, month] = ym.split('-');
+            monthSelect.innerHTML += `<option value="${ym}">${year}年 ${month}月</option>`;
+        });
+        
+        // 還原原本選取的數值
+        monthSelect.value = savedValue;
+        if(monthSelect.selectedIndex === -1) monthSelect.value = "全部";
+    }
 
     // 新增項目函數
     function addTask() {
@@ -213,8 +273,20 @@
         const newTask = { id: Date.now(), date, category, name, owner, priority, status };
         tasks.push(newTask);
         
-        // 清空輸入框並重新渲染
-        document.getElementById('task-name').value = '';
+        document.getElementById('task-name').value = ''; // 清空
+        
+        updateMonthFilterOptions(); // 更新月份清單
+        renderDashboard();
+    }
+
+    // 勾選完成狀態切換函數
+    function toggleTaskStatus(id, isChecked) {
+        tasks = tasks.map(t => {
+            if (t.id === id) {
+                t.status = isChecked ? '已完成' : '進行中';
+            }
+            return t;
+        });
         renderDashboard();
     }
 
@@ -222,33 +294,59 @@
     function deleteTask(id) {
         if(confirm('確定要刪除此項待辦嗎？')) {
             tasks = tasks.filter(task => task.id !== id);
+            updateMonthFilterOptions();
             renderDashboard();
         }
     }
 
-    // 核心渲染主程式
+    // 核心網頁渲染主程式
     function renderDashboard() {
         const filterOwner = document.getElementById('filter-owner').value;
+        const filterMonth = document.getElementById('filter-month').value;
+        const filterStatus = document.getElementById('filter-status').value;
+        
         const today = new Date();
         today.setHours(0,0,0,0);
 
-        // 篩選資料
-        const filteredTasks = tasks.filter(t => filterOwner === '全部' || t.owner === filterOwner);
+        // 進行三重組合篩選
+        const filteredTasks = tasks.filter(t => {
+            // 1. 成員篩選
+            const matchOwner = (filterOwner === '全部' || t.owner === filterOwner);
+            // 2. 月份篩選
+            const matchMonth = (filterMonth === '全部' || t.date.startsWith(filterMonth));
+            // 3. 狀態篩選
+            let matchStatus = true;
+            if (filterStatus === '未完成') {
+                matchStatus = (t.status !== '已完成');
+            } else if (filterStatus === '已完成') {
+                matchStatus = (t.status === '已完成');
+            }
+            
+            return matchOwner && matchMonth && matchStatus;
+        });
 
         // 1. 渲染第 3 區：所有項目清單
         const todoBody = document.getElementById('todo-body');
         todoBody.innerHTML = '';
+        
         if(filteredTasks.length === 0) {
-            todoBody.innerHTML = `<tr><td colspan="7" class="no-data">目前沒有待辦項目</td></tr>`;
+            todoBody.innerHTML = `<tr><td colspan="8" class="no-data">沒有符合篩選條件的項目</td></tr>`;
         } else {
             // 依日期排序
             filteredTasks.sort((a,b) => new Date(a.date) - new Date(b.date));
             filteredTasks.forEach(t => {
+                const isDone = t.status === '已完成';
+                const rowClass = isDone ? 'class="row-done"' : '';
+                const chkAttribute = isDone ? 'checked' : '';
+
                 todoBody.innerHTML += `
-                    <tr>
+                    <tr ${rowClass}>
+                        <td style="text-align:center;">
+                            <input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${chkAttribute}>
+                        </td>
                         <td><strong>${t.date.replace(/-/g, '/')}</strong></td>
                         <td>${t.category}</td>
-                        <td>${t.name}</td>
+                        <td class="task-text">${t.name}</td>
                         <td>${t.owner}</td>
                         <td style="font-weight:bold;">${t.priority}</td>
                         <td><span class="status-badge status-${t.status}">${t.status}</span></td>
@@ -258,9 +356,10 @@
             });
         }
 
-        // 2. 渲染第 0 區：一週內急件解析 (7天內且未完成)
+        // 2. 渲染第 0 區：一週內急件解析 (7天內且「未完成」)
         const urgentContainer = document.getElementById('urgent-container');
         urgentContainer.innerHTML = '';
+        
         const urgentTasks = tasks.filter(t => {
             const diffTime = new Date(t.date) - today;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -281,20 +380,18 @@
             });
         }
 
-        // 3. 渲染第 2 區：動態雙週日曆
+        // 3. 渲染第 2 區：日曆視圖
         renderCalendar(today);
     }
 
-    // 日曆生成器（動態抓取今日起14天）
+    // 日曆生成器（今日起雙週）
     function renderCalendar(today) {
         const calendarBody = document.getElementById('calendar-body');
         calendarBody.innerHTML = '';
         
-        // 找出今日那週的禮拜天作為起點
         let startGrid = new Date(today);
         startGrid.setDate(today.getDate() - today.getDay());
 
-        // 繪製兩週（14格）
         let html = '<tr>';
         for (let i = 0; i < 14; i++) {
             if (i > 0 && i % 7 === 0) html += '</tr><tr>';
@@ -307,11 +404,11 @@
             let dayDisplay = currentGridDate.getDate();
             if(dateStr === today.toISOString().split('T')[0]) dayDisplay += ' (今)';
 
-            // 找出這一天截止的任務
             let dayTasks = tasks.filter(t => t.date === dateStr);
             let tagsHtml = '';
             dayTasks.forEach(t => {
-                tagsHtml += `<span class="calendar-tag" title="${t.name}">${t.name}</span>`;
+                const doneClass = t.status === '已完成' ? 'done' : '';
+                tagsHtml += `<span class="calendar-tag ${doneClass}" title="${t.name}">${t.name}</span>`;
             });
 
             html += `<td ${isToday}><span class="calendar-day-num">${dayDisplay}</span>${tagsHtml}</td>`;
@@ -320,9 +417,9 @@
         calendarBody.innerHTML = html;
     }
 
-    // 連接 Google Sheets 提示
+    // Google Sheets 備份對話框
     function syncToGoogleSheets() {
-        alert('本地資料處理成功！\n提示：要正式將資料寫入雲端 Excel，需要為您產生一組專屬的 Google Apps Script (GAS) 部署網址，並貼入本網頁中。需要現在幫您產生這段後端連線碼嗎？');
+        alert('前端介面串接測試成功！\n接下來我們需要設定試算表的 Apps Script 來接收這些勾選與新增的紀錄。');
     }
 </script>
 
