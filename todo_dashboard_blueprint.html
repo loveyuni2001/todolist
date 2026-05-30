@@ -465,34 +465,31 @@
     }
 
     function syncToGoogleSheets() {
-        if(!API_URL || API_URL.includes("您的全新_Google")) {
-            alert("請先填入您的全新 Google Apps Script Web App 網址！");
-            return;
-        }
-        document.getElementById('loading-mask').style.display = 'flex';
-        const cleanedTasks = tasks.map(t => {
-            let clone = Object.assign({}, t);
-            clone.date = cleanDateStr(clone.date);
-            return clone;
-        });
-        const payload = { tasks: cleanedTasks, config: config };
-        fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
-        .then(res => res.text())
-        .then(text => {
-            if(text === "Success") {
-                alert("🎉 所有待辦事項與自訂選單設定已成功同步至雲端試算表！");
-            } else {
-                alert("回傳回應：" + text);
-            }
-        })
-        .catch(err => {
-            console.error("儲存失敗：", err);
-            alert("同步至雲端時發生錯誤！");
-        })
-        .finally(() => {
-            document.getElementById('loading-mask').style.display = 'none';
-        });
+    if(!API_URL || API_URL.includes("您的全新_Google")) {
+        alert("請先填入您的全新 Google Apps Script Web App 網址！");
+        return;
     }
+    document.getElementById('loading-mask').style.display = 'flex';
+    
+    // 關鍵：這裡要把每一筆任務的 description 也一併打包
+    const cleanedTasks = tasks.map(t => {
+        let clone = Object.assign({}, t);
+        clone.date = cleanDateStr(clone.date);
+        // 如果原本沒有這個欄位，強行給它一個空字串，確保 Sheets 不會崩潰
+        clone.description = t.description || ""; 
+        return clone;
+    });
+
+    const payload = { tasks: cleanedTasks, config: config };
+    fetch(API_URL, { method: 'POST', body: JSON.stringify(payload) })
+    .then(res => res.text())
+    .then(text => {
+        if(text === "Success") alert("🎉 筆記已隨任務同步至雲端試算表！");
+        else alert("回傳回應：" + text);
+    })
+    .catch(err => { console.error("儲存失敗：", err); alert("同步錯誤！"); })
+    .finally(() => { document.getElementById('loading-mask').style.display = 'none'; });
+}
 
     function toggleModal(show) {
         document.getElementById('settings-modal').style.display = show ? 'flex' : 'none';
