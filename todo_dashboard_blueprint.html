@@ -1,4 +1,4 @@
-<!DOCTYPE html>time 20260603 17:41
+<!DOCTYPE html>time 20260603 17:46
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -589,9 +589,7 @@
                 let tr = document.createElement('tr');
                 for (let col = 0; col < 7; col++) {
                     let td = document.createElement('td');
-                    // 強制將日期加上 8 小時（轉換為台灣時區），避免跨日偏移
-let localDate = new Date(currentPointer.getTime() + 8 * 60 * 60 * 1000);
-let dateStr = `${localDate.getFullYear()}/${String(localDate.getMonth()+1).padStart(2,'0')}/${String(localDate.getDate()).padStart(2,'0')}`;
+                    let dateStr = `${currentPointer.getFullYear()}/${String(currentPointer.getMonth()+1).padStart(2,'0')}/${String(currentPointer.getDate()).padStart(2,'0')}`;
 
                     if (currentPointer.toDateString() === today.toDateString()) {
                         td.className = 'today';
@@ -729,13 +727,9 @@ let dateStr = `${localDate.getFullYear()}/${String(localDate.getMonth()+1).padSt
                     <td style="text-align:center;"><input type="checkbox" class="chk-box" onchange="toggleTaskStatus(${t.id}, this.checked)" ${isDone ? 'checked' : ''}></td>
                     <td class="nowrap-cell" onclick="${isDone ? '' : `startEditDate(${t.id}, '${cleanDate}', this)`}"><span><strong>${cleanDate}</strong></span></td>
                     <td onclick="${isDone ? '' : `startEditCategory(${t.id}, '${t.category}', this)`}"><span>${t.category}</span></td>
-                   <td style="cursor: pointer;">
-    <span onclick="toggleDetail(${t.id}, this.parentElement.parentElement)" style="margin-right:8px;">📝</span>
-    <span class="${isDone ? 'task-text' : 'task-text editable-cell'}" 
-          onclick="${isDone ? '' : `startEditName(${t.id}, '${t.name.replace(/'/g, "\\'")}', this.parentElement)`}">
-        ${t.name}
-    </span>
-</td>
+                    <td onclick="toggleDetail(${t.id}, this.parentElement)">
+                        <span class="${isDone ? 'task-text' : 'task-text editable-cell'}">📝 ${t.name}</span>
+                    </td>
                     <td onclick="${isDone ? '' : `startEditAttachment(${t.id}, '${(t.attachment || "").replace(/'/g, "\\'")}', this)`}"><span>${t.attachment ? `<a href="${t.attachment}" target="_blank" class="btn-attachment" onclick="event.stopPropagation()">🔗 查看附件</a>` : '<span class="empty-link">(點此補貼網址)</span>'}</span></td>
                     <td onclick="${isDone ? '' : `startEditOwner(${t.id}, '${t.owner}', this)`}"><span>${t.owner}</span></td>
                     <td class="nowrap-cell" style="font-weight:bold;">${t.priority}</td>
