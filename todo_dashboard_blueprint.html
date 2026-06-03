@@ -262,16 +262,16 @@
         <div class="filter-bar">
             <div class="filter-left">📊 03 目前所有項目清單 <span style="font-size:11px; font-weight:normal; color:#6b7280;">(修改後請記得點右上角「儲存並同步至雲端」)</span></div>
             <div class="filter-controls">
-                <select id="filter-owner" class="inline-select" onchange="refreshAll()">
+                <select id="filter-owner" class="inline-select" onchange="renderDashboard()">
                     <option value="全部">👥 全部成員</option>
                 </select>
-                <select id="filter-month" class="inline-select" onchange="refreshAll()">
+                <select id="filter-month" class="inline-select" onchange="renderDashboard()">
                     <option value="全部">📅 全部月份</option>
                 </select>
-                <select id="filter-category" class="inline-select" onchange="refreshAll()">
+                <select id="filter-category" class="inline-select" onchange="renderDashboard()">
                     <option value="全部">🏷️ 全部分類</option>
                 </select>
-                <select id="filter-status" class="inline-select" onchange="refreshAll()">
+                <select id="filter-status" class="inline-select" onchange="renderDashboard()">
                     <option value="全部">🔍 全部狀態</option>
                     <option value="未完成">⏳ 未完成</option>
                     <option value="已完成">✅ 已完成</option>
@@ -434,14 +434,14 @@
                 }
                 applyConfigUI();
                 updateMonthFilterOptions();
-                refreshAll();
+                renderDashboard();
             })
             .catch(err => {
                 console.error("載入失敗：", err);
                 alert("載入雲端資料時發生錯誤。");
                 applyConfigUI();
                 updateMonthFilterOptions();
-                refreshAll();
+                renderDashboard();
             })
             .finally(() => {
                 if(loadingMask) loadingMask.style.display = 'none';
@@ -484,7 +484,7 @@
         config.categories = cInput.split(',').map(s => s.trim()).filter(s => s);
         applyConfigUI();
         toggleModal(false);
-        refreshAll();
+        renderDashboard();
     }
 
     function applyConfigUI() {
@@ -534,7 +534,7 @@
         document.getElementById('task-name').value = '';
         document.getElementById('task-attachment').value = '';
         updateMonthFilterOptions();
-        refreshAll();
+        renderDashboard();
     }
 
     function renderUrgentTasks() {
@@ -629,7 +629,7 @@ let dateStr = `${localDate.getFullYear()}/${String(localDate.getMonth()+1).padSt
         function finishEdit() {
             const newText = input.value.trim() || currentText;
             tasks = tasks.map(t => { if (t.id === id) t.name = newText; return t; });
-            refreshAll();
+            renderDashboard();
         }
         input.onblur = finishEdit;
         input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
@@ -643,7 +643,7 @@ let dateStr = `${localDate.getFullYear()}/${String(localDate.getMonth()+1).padSt
         function finishEdit() {
             const newLink = input.value.trim();
             tasks = tasks.map(t => { if (t.id === id) t.attachment = newLink; return t; });
-            refreshAll();
+            renderDashboard();
         }
         input.onblur = finishEdit;
         input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
@@ -658,7 +658,7 @@ let dateStr = `${localDate.getFullYear()}/${String(localDate.getMonth()+1).padSt
             const newDate = cleanDateStr(input.value) || currentDate;
             tasks = tasks.map(t => { if (t.id === id) t.date = newDate; return t; });
             updateMonthFilterOptions();
-            refreshAll();
+            renderDashboard();
         }
         input.onblur = finishEdit;
         input.onkeydown = function(e) { if(e.key === 'Enter') finishEdit(); };
@@ -669,7 +669,7 @@ let dateStr = `${localDate.getFullYear()}/${String(localDate.getMonth()+1).padSt
         const select = document.createElement('select'); select.className = 'cell-inline-input';
         config.categories.forEach(c => { const opt = document.createElement('option'); opt.value = c; opt.textContent = c; if (c === currentCategory) opt.selected = true; select.appendChild(opt); });
         cellElement.innerHTML = ''; cellElement.appendChild(select); select.focus();
-        function finishEdit() { const newCat = select.value; tasks = tasks.map(t => { if (t.id === id) t.category = newCat; return t; }); refreshAll(); }
+        function finishEdit() { const newCat = select.value; tasks = tasks.map(t => { if (t.id === id) t.category = newCat; return t; }); renderDashboard(); }
         select.onblur = finishEdit; select.onchange = finishEdit;
     }
 
@@ -678,20 +678,20 @@ let dateStr = `${localDate.getFullYear()}/${String(localDate.getMonth()+1).padSt
         const select = document.createElement('select'); select.className = 'cell-inline-input';
         config.owners.forEach(o => { const opt = document.createElement('option'); opt.value = o; opt.textContent = o; if (o === currentOwner) opt.selected = true; select.appendChild(opt); });
         cellElement.innerHTML = ''; cellElement.appendChild(select); select.focus();
-        function finishEdit() { const newOwner = select.value; tasks = tasks.map(t => { if (t.id === id) t.owner = newOwner; return t; }); refreshAll(); }
+        function finishEdit() { const newOwner = select.value; tasks = tasks.map(t => { if (t.id === id) t.owner = newOwner; return t; }); renderDashboard(); }
         select.onblur = finishEdit; select.onchange = finishEdit;
     }
 
     function toggleTaskStatus(id, isChecked) {
         tasks = tasks.map(t => { if (t.id === id) t.status = isChecked ? '已完成' : '進行中'; return t; });
-        refreshAll();
+        renderDashboard();
     }
 
     function deleteTask(id) {
-        if(confirm('確定要刪除此項待辦嗎？')) { tasks = tasks.filter(task => task.id !== id); updateMonthFilterOptions(); refreshAll(); }
+        if(confirm('確定要刪除此項待辦嗎？')) { tasks = tasks.filter(task => task.id !== id); updateMonthFilterOptions(); renderDashboard(); }
     }
 
-    function refreshAll() {
+    function renderDashboard() {
         renderUrgentTasks();
         renderCalendar();
 
@@ -779,7 +779,7 @@ let dateStr = `${localDate.getFullYear()}/${String(localDate.getMonth()+1).padSt
             });
             alert("筆記已更新！(記得點選右上角同步按鈕存入雲端)");
             newRow.remove();
-            refreshAll();
+            renderDashboard();
         });
     }
 </script>
